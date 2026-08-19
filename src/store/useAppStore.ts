@@ -16,6 +16,7 @@ interface AppState {
 
   staff: Staff[];
   addStaff: (staffMember: Staff) => void;
+  updateStaff: (id: string, updates: Partial<Staff>) => void;
   deleteStaff: (id: string) => void;
 
   customServices: string[];
@@ -48,6 +49,9 @@ export const useAppStore = create<AppState>()(
         { id: '1', name: 'Ameen', phone: '', position: 'Audio Engineer', joiningDate: Date.now(), salary: 0, status: 'active' }
       ],
       addStaff: (staffMember) => set((state) => ({ staff: [...state.staff, staffMember] })),
+      updateStaff: (id, updates) => set((state) => ({
+        staff: state.staff.map(s => s.id === id ? { ...s, ...updates } : s)
+      })),
       deleteStaff: (id) => set((state) => ({ staff: state.staff.filter(s => s.id !== id) })),
 
       customServices: [],

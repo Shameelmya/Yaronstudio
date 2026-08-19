@@ -1,49 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Plus, Calendar as CalendarIcon, Clock, User, Music, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, Clock, User, Music, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, addDays } from 'date-fns';
-
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, isSameDay } from 'date-fns';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { AlertCircle } from 'lucide-react';
+import { listenToBookings, createBooking, updateBookingStatus } from '@/lib/api';
+import { useAppStore } from '@/store/useAppStore';
 
 export default function Bookings() {
   const [view, setView] = useState<'today' | 'week' | 'month'>('today');
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   const [newBookingData, setNewBookingData] = useState({ title: '', customer: '', date: '', time: '' });
   const [bookingError, setBookingError] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  
+  const { activeStudioId } = useAppStore();
+  const [bookings, setBookings] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!activeStudioId) return;
+    const unsub = listenToBookings(activeStudioId, (fetchedBookings) => {
+      // Map Firestore string dates to Date objects if needed
+      setBookings(fetchedBookings.map(b => ({
+        ...b,
+        time: new Date(b.date) // Assuming API saves 'date' field as ISO string or timestamp
+      })));
+    });
+    return () => unsub();
+  }, [activeStudioId]);
 
   const today = new Date();
-  
-  // mock bookings
-  const [bookings, setBookings] = useState([
-    { id: 1, time: addDays(today, 0), title: 'Vocal Recording', work: 'Ente Pattu', customer: 'Shibili Moonnakkal', duration: '2 Hours', status: 'scheduled' },
-    { id: 2, time: addDays(today, 0), title: 'Mixing', work: 'Wedding BGM', customer: 'Ameen', duration: '1 Hour', status: 'completed' },
-    { id: 3, time: addDays(today, 1), title: 'Dubbing', work: 'Short Film', customer: 'Nishad', duration: '3 Hours', status: 'scheduled' },
-    { id: 4, time: addDays(today, 2), title: 'Mastering', work: 'Ad Music', customer: 'Yaron Studio', duration: '1 Hour', status: 'missed' },
-  ]);
 
-  const updateStatus = (id: number, status: string) => {
-    setBookings(bookings.map(b => b.id === id ? { ...b, status } : b));
+  const handleStatusUpdate = async (id: string, status: string) => {
+    try {
+      await updateBookingStatus(id, status as any);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleCreateBooking = (e: React.FormEvent) => {
+  const handleCreateBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     setBookingError('');
 
-    if (!newBookingData.date || !newBookingData.time || !newBookingData.customer) return;
+    if (!newBookingData.date || !newBookingData.time || !newBookingData.customer || !activeStudioId) return;
 
-    // Parse the input date and time to create a Date object
     const [year, month, day] = newBookingData.date.split('-').map(Number);
     const [hour, minute] = newBookingData.time.split(':').map(Number);
-    
     const newBookingTime = new Date(year, month - 1, day, hour, minute);
     
-    // Check for duplicates
-    // Assuming a booking takes roughly 1 hour block for simplicity in this check, 
-    // or we can just check if they are in the same hour
+    // Check duplicates
     const isDuplicate = bookings.some(b => {
       return (
         b.time.getFullYear() === newBookingTime.getFullYear() &&
@@ -55,29 +63,70 @@ export default function Bookings() {
 
     if (isDuplicate) {
       const duplicateBooking = bookings.find(b => b.time.getHours() === newBookingTime.getHours() && b.time.getDate() === newBookingTime.getDate());
-      setBookingError(`${duplicateBooking?.customer}'s work is booked for this time. No other booking allowed.`);
+      setBookingError(`${duplicateBooking?.customerId || 'Someone'}'s work is booked for this time. No other booking allowed.`);
       return;
     }
 
-    setBookings([...bookings, {
-      id: Date.now(),
-      time: newBookingTime,
-      title: newBookingData.title || 'Studio Session',
-      work: 'New Work',
-      customer: newBookingData.customer,
-      duration: '1 Hour',
-      status: 'scheduled'
-    }]);
-
-    setIsNewBookingOpen(false);
-    setNewBookingData({ title: '', customer: '', date: '', time: '' });
+    try {
+      setIsCreating(true);
+      await createBooking({
+        id: Date.now().toString(),
+        studioId: activeStudioId,
+        date: newBookingTime.getTime() as any,
+        service: newBookingData.title || 'Studio Session',
+        customerId: newBookingData.customer,
+        workId: 'New Work',
+        duration: 60,
+        status: 'scheduled'
+      });
+      setIsNewBookingOpen(false);
+      setNewBookingData({ title: '', customer: '', date: '', time: '' });
+    } catch (err) {
+      setBookingError('Failed to create booking.');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const filteredBookings = bookings.filter(b => {
-    if (view === 'today') return b.time.getDate() === today.getDate();
-    return true; // Simple mock for week/month
-  });
-  
+  const filteredBookings = useMemo(() => {
+    return bookings.filter(b => {
+      if (view === 'today') {
+        return isSameDay(b.time, today);
+      } else if (view === 'week') {
+        return isWithinInterval(b.time, { start: startOfWeek(today), end: endOfWeek(today) });
+      } else if (view === 'month') {
+        return isWithinInterval(b.time, { start: startOfMonth(today), end: endOfMonth(today) });
+      }
+      return true;
+    }).sort((a, b) => a.time.getTime() - b.time.getTime());
+  }, [bookings, view, today]);
+
+  // Stats calculation
+  const stats = useMemo(() => {
+    let total = filteredBookings.length;
+    let completed = 0;
+    let missed = 0;
+    filteredBookings.forEach(b => {
+      if (b.status === 'completed') completed++;
+      if (b.status === 'missed' || b.status === 'cancelled') missed++;
+    });
+    return { total, completed, missed, available: Math.max(0, 10 - total) }; // Mock max 10 slots
+  }, [filteredBookings]);
+
+  // Mini Calendar generation
+  const calendarDays = useMemo(() => {
+    const days = [];
+    const start = startOfWeek(today);
+    for (let i = 0; i < 7; i++) {
+      const current = new Date(start);
+      current.setDate(start.getDate() + i);
+      const isToday = isSameDay(current, today);
+      const hasBooking = bookings.some(b => isSameDay(b.time, current));
+      days.push({ date: current, isToday, hasBooking });
+    }
+    return days;
+  }, [today, bookings]);
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -141,17 +190,17 @@ export default function Bookings() {
                 <div className="p-4 sm:p-5 flex-1 flex flex-col justify-center">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-bold text-lg text-yaron-charcoal dark:text-white group-hover:text-yaron-magenta transition-colors">{booking.title}</h3>
+                      <h3 className="font-bold text-lg text-yaron-charcoal dark:text-white group-hover:text-yaron-magenta transition-colors">{booking.service}</h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-1">
-                        <Music size={14} className="mr-1.5" /> {booking.work}
+                        <Music size={14} className="mr-1.5" /> Work: {booking.workId}
                       </p>
                     </div>
                     {booking.status === 'scheduled' && (
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/20" onClick={() => updateStatus(booking.id, 'missed')} title="Mark as Missed">
+                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/20" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(booking.id, 'missed'); }} title="Mark as Missed">
                            <XCircle size={16} />
                         </Button>
-                        <Button size="sm" className="bg-green-500 hover:bg-green-600 text-white border-none shadow-sm" onClick={() => updateStatus(booking.id, 'completed')}>
+                        <Button size="sm" className="bg-green-500 hover:bg-green-600 text-white border-none shadow-sm" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(booking.id, 'completed'); }}>
                           <CheckCircle2 size={16} className="mr-1.5" /> Done
                         </Button>
                       </div>
@@ -160,11 +209,11 @@ export default function Bookings() {
                   <div className="flex flex-wrap gap-4 mt-4 text-sm">
                     <div className="flex items-center text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md">
                       <User size={14} className="mr-1.5 text-gray-400" />
-                      {booking.customer}
+                      {booking.customerId}
                     </div>
                     <div className="flex items-center text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md">
                       <Clock size={14} className="mr-1.5 text-gray-400" />
-                      {booking.duration}
+                      1 Hour
                     </div>
                   </div>
                 </div>
@@ -180,31 +229,45 @@ export default function Bookings() {
 
         <div className="space-y-6">
           <Card className="bg-yaron-magenta/5 dark:bg-yaron-magenta/10 border-none">
-            <h3 className="font-semibold text-yaron-charcoal dark:text-white mb-4">Quick Stats</h3>
+            <h3 className="font-semibold text-yaron-charcoal dark:text-white mb-4">Quick Stats ({view})</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400 text-sm">Total Today</span>
-                <span className="font-bold text-yaron-charcoal dark:text-white">4 Sessions</span>
+                <span className="text-gray-600 dark:text-gray-400 text-sm">Total Sessions</span>
+                <span className="font-bold text-yaron-charcoal dark:text-white">{stats.total}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400 text-sm">Completed</span>
-                <span className="font-bold text-green-600 dark:text-green-400">1 Session</span>
+                <span className="font-bold text-green-600 dark:text-green-400">{stats.completed}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400 text-sm">Missed</span>
-                <span className="font-bold text-red-600 dark:text-red-400">0 Sessions</span>
+                <span className="font-bold text-red-600 dark:text-red-400">{stats.missed}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400 text-sm">Available Slots</span>
-                <span className="font-bold text-yaron-orange">2 Slots</span>
+                <span className="text-gray-600 dark:text-gray-400 text-sm">Available Slots (Est)</span>
+                <span className="font-bold text-yaron-orange">{stats.available}</span>
               </div>
             </div>
           </Card>
           
           <Card className="dark:bg-gray-900 dark:border-gray-800">
-             <h3 className="font-semibold text-yaron-charcoal dark:text-white mb-4">Mini Calendar</h3>
-             <div className="aspect-square bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center justify-center text-sm text-gray-400 border border-gray-100 dark:border-gray-700">
-               [Calendar Component Placeholder]
+             <h3 className="font-semibold text-yaron-charcoal dark:text-white mb-4">This Week</h3>
+             <div className="grid grid-cols-7 gap-2">
+               {calendarDays.map((day, i) => (
+                 <div key={i} className="flex flex-col items-center">
+                   <span className="text-xs text-gray-400 mb-1">{format(day.date, 'EEEEEE')}</span>
+                   <div className={cn(
+                     "w-8 h-8 rounded-full flex items-center justify-center text-sm relative",
+                     day.isToday ? "bg-yaron-magenta text-white font-bold" : "text-gray-600 dark:text-gray-300",
+                     !day.isToday && day.hasBooking ? "bg-gray-100 dark:bg-gray-800" : ""
+                   )}>
+                     {format(day.date, 'd')}
+                     {day.hasBooking && !day.isToday && (
+                       <span className="absolute bottom-1 w-1 h-1 bg-yaron-orange rounded-full"></span>
+                     )}
+                   </div>
+                 </div>
+               ))}
              </div>
           </Card>
         </div>
@@ -249,8 +312,8 @@ export default function Bookings() {
             />
           </div>
           <div className="pt-4 flex space-x-3">
-            <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsNewBookingOpen(false); setBookingError(''); }}>Cancel</Button>
-            <Button type="submit" className="flex-1 bg-yaron-gradient text-white border-none">Book Slot</Button>
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsNewBookingOpen(false); setBookingError(''); }} disabled={isCreating}>Cancel</Button>
+            <Button type="submit" className="flex-1 bg-yaron-gradient text-white border-none" disabled={isCreating}>{isCreating ? 'Booking...' : 'Book Slot'}</Button>
           </div>
         </form>
       </Modal>

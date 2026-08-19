@@ -17,6 +17,11 @@ export default function Home() {
   const [overdueWorks, setOverdueWorks] = useState<any[]>([]);
   const [recentWorks, setRecentWorks] = useState<any[]>([]);
   const [todayBookings, setTodayBookings] = useState<any[]>([]);
+  
+  const [totalPendingPayments, setTotalPendingPayments] = useState(0);
+  const [incomeThisMonth, setIncomeThisMonth] = useState(0);
+  const [activeWorksCount, setActiveWorksCount] = useState(0);
+  
   const { activeStudioId } = useAppStore();
   
   useEffect(() => {
@@ -33,6 +38,29 @@ export default function Home() {
          id: w.id, title: w.title, pending: w.totalAmount - (w.paidAmount || 0)
       }));
       setRecentWorks(recent);
+
+      let pending = 0;
+      let income = 0;
+      let active = 0;
+      
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+
+      works.forEach(w => {
+        const amtPending = w.totalAmount - (w.paidAmount || 0);
+        if (amtPending > 0) pending += amtPending;
+        if (w.status === 'pending' || w.status === 'in_progress') active++;
+        
+        // Very basic income calculation based on works created this month
+        // In a more complex app, we'd look at payment transaction dates or the expenses collection
+        if (w.createdAt && w.createdAt.getMonth() === currentMonth && w.createdAt.getFullYear() === currentYear) {
+           income += (w.paidAmount || 0);
+        }
+      });
+
+      setTotalPendingPayments(pending);
+      setActiveWorksCount(active);
+      setIncomeThisMonth(income);
     });
     
     const unsubBookings = listenToBookings(activeStudioId, (bookings) => {
@@ -90,7 +118,7 @@ export default function Home() {
             </div>
             <span className="text-white font-medium">Pending Payments</span>
           </div>
-          <p className="text-3xl font-bold text-white mt-4">{formatCurrency(125000)}</p>
+          <p className="text-3xl font-bold text-white mt-4">{formatCurrency(totalPendingPayments)}</p>
         </Card>
 
         <Card className="bg-yaron-orange border-none shadow-sm relative overflow-hidden">
@@ -101,7 +129,7 @@ export default function Home() {
             </div>
             <span className="text-white font-medium">Income (This Month)</span>
           </div>
-          <p className="text-3xl font-bold text-white mt-4">{formatCurrency(450000)}</p>
+          <p className="text-3xl font-bold text-white mt-4">{formatCurrency(incomeThisMonth)}</p>
         </Card>
 
         <Card className="bg-yaron-purple border-none shadow-sm relative overflow-hidden">
@@ -112,7 +140,7 @@ export default function Home() {
             </div>
             <span className="text-white font-medium">Active Works</span>
           </div>
-          <p className="text-3xl font-bold text-white mt-4">24</p>
+          <p className="text-3xl font-bold text-white mt-4">{activeWorksCount}</p>
         </Card>
       </div>
 
@@ -124,23 +152,32 @@ export default function Home() {
             <Button variant="ghost" size="sm" onClick={() => navigate('/bookings')}>View All</Button>
           </div>
           <div className="space-y-4 flex-1">
-            {[1, 2, 3].map((_, i) => (
+            {todayBookings.map((session, i) => (
               <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700 gap-3">
                 <div className="flex items-center space-x-4">
                   <div className="text-center w-16 shrink-0 bg-white dark:bg-gray-900 py-1.5 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-                    <p className="text-sm font-bold text-yaron-magenta">10:00</p>
-                    <p className="text-[10px] font-semibold text-gray-500 uppercase">AM</p>
+                    <p className="text-sm font-bold text-yaron-magenta">{format(session.time, 'hh:mm')}</p>
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase">{format(session.time, 'a')}</p>
                   </div>
                   <div>
-                    <p className="font-semibold text-yaron-charcoal dark:text-white">Vocal Recording</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Shibili • Ente Pattu</p>
+                    <p className="font-semibold text-yaron-charcoal dark:text-white">{session.title}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{session.customer} • {session.work}</p>
                   </div>
                 </div>
-                <Button size="sm" className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white border-none shadow-sm">
-                  <CheckCircle2 size={16} className="mr-1.5" /> Mark as Done
-                </Button>
+                {session.status !== 'completed' ? (
+                  <Button size="sm" className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white border-none shadow-sm" onClick={() => updateBookingStatus(session.id, 'completed')}>
+                    <CheckCircle2 size={16} className="mr-1.5" /> Mark as Done
+                  </Button>
+                ) : (
+                  <div className="sm:w-auto text-green-600 dark:text-green-400 font-bold text-sm uppercase tracking-wider flex items-center justify-center">
+                    <CheckCircle2 size={16} className="mr-1" /> Done
+                  </div>
+                )}
               </div>
             ))}
+            {todayBookings.length === 0 && (
+              <div className="text-center text-gray-500 py-6">No sessions booked for today.</div>
+            )}
           </div>
         </Card>
 
@@ -151,15 +188,24 @@ export default function Home() {
             <Button variant="ghost" size="sm" onClick={() => navigate('/works')}>View All</Button>
           </div>
           <div className="space-y-4 flex-1">
-            {[1, 2, 3].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+            {recentWorks.map((work) => (
+              <div key={work.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
                 <div>
-                  <p className="font-semibold text-yaron-charcoal dark:text-white">Album Song 0{i+1}</p>
-                  <p className="text-sm font-medium text-yaron-orange mt-0.5">Pending: {formatCurrency(5000)}</p>
+                  <p className="font-semibold text-yaron-charcoal dark:text-white">{work.title}</p>
+                  {work.pending > 0 ? (
+                    <p className="text-sm font-medium text-yaron-orange mt-0.5">Pending: {formatCurrency(work.pending)}</p>
+                  ) : (
+                    <p className="text-sm font-bold text-green-500 mt-0.5">Fully Paid</p>
+                  )}
                 </div>
-                <Button variant="outline" size="sm" className="dark:border-gray-600 dark:hover:bg-gray-700">Receive Pay</Button>
+                {work.pending > 0 && (
+                  <Button variant="outline" size="sm" className="dark:border-gray-600 dark:hover:bg-gray-700" onClick={() => navigate('/works')}>Receive Pay</Button>
+                )}
               </div>
             ))}
+            {recentWorks.length === 0 && (
+               <div className="text-center text-gray-500 py-6">No recent works available.</div>
+            )}
           </div>
         </Card>
       </div>
@@ -179,7 +225,7 @@ export default function Home() {
              
              <div className="flex space-x-3 pt-4 border-t border-gray-100 dark:border-gray-800">
                 <Button variant="outline" className="flex-1" onClick={() => setSelectedOverdueWork(null)}>Back to List</Button>
-                <Button className="flex-1">Open Work Details</Button>
+                <Button className="flex-1" onClick={() => navigate('/works')}>Open Work Details</Button>
              </div>
            </div>
         ) : (

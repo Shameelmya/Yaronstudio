@@ -1,36 +1,137 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { IndianRupee, TrendingUp, TrendingDown, FileText, Download, Plus, Filter, Music, Video, Headphones } from 'lucide-react';
+import { IndianRupee, TrendingUp, TrendingDown, FileText, Download, Plus, Filter, Music, Video, Headphones, Mic } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const chartData = [
-  { name: 'Jan', income: 40000, expense: 24000 },
-  { name: 'Feb', income: 30000, expense: 13980 },
-  { name: 'Mar', income: 20000, expense: 9800 },
-  { name: 'Apr', income: 27800, expense: 3908 },
-  { name: 'May', income: 18900, expense: 4800 },
-  { name: 'Jun', income: 23900, expense: 3800 },
-  { name: 'Jul', income: 34900, expense: 4300 },
-];
-
-const mockServiceData = [
-  { service: 'Vocal Recording', count: 45, revenue: 135000, icon: Headphones, color: 'text-blue-500' },
-  { service: 'Mixing', count: 32, revenue: 160000, icon: Music, color: 'text-yaron-purple' },
-  { service: 'Mastering', count: 28, revenue: 84000, icon: Music, color: 'text-yaron-magenta' },
-  { service: 'Video Editing', count: 12, revenue: 120000, icon: Video, color: 'text-yaron-orange' },
-];
+import { listenToWorks, listenToExpenses } from '@/lib/api';
+import { useAppStore } from '@/store/useAppStore';
+import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { NewExpenseModal } from '@/components/finance/NewExpenseModal';
 
 export default function Finance() {
   const [activeTab, setActiveTab] = useState<'overview' | 'analysis' | 'invoices'>('overview');
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('All');
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  
+  const { activeStudioId } = useAppStore();
+  const [works, setWorks] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!activeStudioId) return;
+    
+    const unsubWorks = listenToWorks(activeStudioId, (fetchedWorks) => {
+      setWorks(fetchedWorks);
+    });
+
+    const unsubExpenses = listenToExpenses(activeStudioId, (fetchedExpenses) => {
+      setExpenses(fetchedExpenses);
+    });
+
+    return () => { unsubWorks(); unsubExpenses(); };
+  }, [activeStudioId]);
+
+  // Calculations for current month
+  const today = new Date();
+  const currentMonthStart = startOfMonth(today);
+  const currentMonthEnd = endOfMonth(today);
+
+  const netIncome = useMemo(() => {
+    return works.reduce((sum, w) => {
+      if (w.createdAt && isWithinInterval(w.createdAt, { start: currentMonthStart, end: currentMonthEnd })) {
+        return sum + (w.paidAmount || 0);
+      }
+      return sum;
+    }, 0);
+  }, [works, currentMonthStart, currentMonthEnd]);
+
+  const totalExpenses = useMemo(() => {
+    return expenses.reduce((sum, e) => {
+      if (e.date && isWithinInterval(e.date, { start: currentMonthStart, end: currentMonthEnd })) {
+        return sum + e.amount;
+      }
+      return sum;
+    }, 0);
+  }, [expenses, currentMonthStart, currentMonthEnd]);
+
+  const pendingRecovery = useMemo(() => {
+    return works.reduce((sum, w) => {
+      const pending = w.totalAmount - (w.paidAmount || 0);
+      if (pending > 0 && w.status !== 'cancelled') return sum + pending;
+      return sum;
+    }, 0);
+  }, [works]);
+
+  // 7 Month Chart Data
+  const chartData = useMemo(() => {
+    const data = [];
+    for (let i = 6; i >= 0; i--) {
+      const monthStart = startOfMonth(subMonths(today, i));
+      const monthEnd = endOfMonth(subMonths(today, i));
+      
+      const monthIncome = works.reduce((sum, w) => {
+        if (w.createdAt && isWithinInterval(w.createdAt, { start: monthStart, end: monthEnd })) {
+          return sum + (w.paidAmount || 0);
+        }
+        return sum;
+      }, 0);
+
+      const monthExpense = expenses.reduce((sum, e) => {
+        if (e.date && isWithinInterval(e.date, { start: monthStart, end: monthEnd })) {
+          return sum + e.amount;
+        }
+        return sum;
+      }, 0);
+
+      data.push({
+        name: format(monthStart, 'MMM'),
+        income: monthIncome,
+        expense: monthExpense
+      });
+    }
+    return data;
+  }, [works, expenses]);
+
+  // Service Analysis
+  const serviceData = useMemo(() => {
+    const servicesMap: Record<string, { count: number, revenue: number, icon: any, color: string }> = {};
+    const iconMap: Record<string, any> = { 'Vocal Recording': Mic, 'Mixing': Music, 'Mastering': Music, 'Video Editing': Video, 'Default': Headphones };
+    const colorMap: Record<string, string> = { 'Vocal Recording': 'text-blue-500', 'Mixing': 'text-yaron-purple', 'Mastering': 'text-yaron-magenta', 'Video Editing': 'text-yaron-orange', 'Default': 'text-gray-500' };
+
+    works.forEach(w => {
+      if (w.services && w.services.length > 0) {
+        w.services.forEach((s: string) => {
+          if (!servicesMap[s]) {
+            servicesMap[s] = { count: 0, revenue: 0, icon: iconMap[s] || iconMap['Default'], color: colorMap[s] || colorMap['Default'] };
+          }
+          servicesMap[s].count++;
+          servicesMap[s].revenue += ((w.paidAmount || 0) / w.services.length); // Approximate revenue split
+        });
+      }
+    });
+
+    return Object.entries(servicesMap).map(([service, data]) => ({
+      service,
+      ...data
+    })).sort((a, b) => b.revenue - a.revenue);
+  }, [works]);
 
   const filteredServiceData = useMemo(() => {
-    if (selectedServiceFilter === 'All') return mockServiceData;
-    return mockServiceData.filter(d => d.service === selectedServiceFilter);
-  }, [selectedServiceFilter]);
+    if (selectedServiceFilter === 'All') return serviceData;
+    return serviceData.filter(d => d.service === selectedServiceFilter);
+  }, [selectedServiceFilter, serviceData]);
+
+  // Completed Works for Invoices
+  const recentInvoices = useMemo(() => {
+    return works.filter(w => w.status === 'completed' || w.status === 'delivered')
+                .sort((a, b) => b.createdAt?.getTime() - a.createdAt?.getTime())
+                .slice(0, 5);
+  }, [works]);
+
+  const handleDownloadReport = () => {
+    alert("Report generation will be implemented in future versions.");
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
@@ -40,11 +141,11 @@ export default function Finance() {
           <p className="text-gray-500 dark:text-gray-400 text-sm">Manage income, expenses, and invoices</p>
         </div>
         <div className="flex space-x-2 w-full sm:w-auto">
-          <Button variant="outline" className="flex-1 sm:flex-none">
+          <Button variant="outline" className="flex-1 sm:flex-none" onClick={handleDownloadReport}>
             <Download size={18} className="mr-2" />
             Report
           </Button>
-          <Button className="flex-1 sm:flex-none shadow-md bg-yaron-gradient text-white border-none h-12 px-6 font-semibold">
+          <Button onClick={() => setIsExpenseModalOpen(true)} className="flex-1 sm:flex-none shadow-md bg-yaron-gradient text-white border-none h-12 px-6 font-semibold">
             <Plus size={18} className="mr-2" />
             Add Expense
           </Button>
@@ -79,7 +180,7 @@ export default function Finance() {
                 </div>
                 <span className="text-green-900 dark:text-green-300 font-medium">Net Income (Month)</span>
               </div>
-              <p className="text-3xl font-bold text-green-950 dark:text-green-400 mt-4">{formatCurrency(330000)}</p>
+              <p className="text-3xl font-bold text-green-950 dark:text-green-400 mt-4">{formatCurrency(netIncome - totalExpenses)}</p>
             </Card>
 
             <Card className="bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-900/10 border-none shadow-sm relative overflow-hidden group">
@@ -88,9 +189,9 @@ export default function Finance() {
                 <div className="w-10 h-10 rounded-full bg-white dark:bg-red-900/50 flex items-center justify-center shadow-sm">
                   <TrendingDown className="text-red-600 dark:text-red-400" size={20} />
                 </div>
-                <span className="text-red-900 dark:text-red-300 font-medium">Total Expenses</span>
+                <span className="text-red-900 dark:text-red-300 font-medium">Total Expenses (Month)</span>
               </div>
-              <p className="text-3xl font-bold text-red-950 dark:text-red-400 mt-4">{formatCurrency(120000)}</p>
+              <p className="text-3xl font-bold text-red-950 dark:text-red-400 mt-4">{formatCurrency(totalExpenses)}</p>
             </Card>
 
             <Card className="bg-gradient-to-br from-yaron-magenta/5 to-yaron-purple/5 dark:from-yaron-magenta/10 dark:to-yaron-purple/10 border-none shadow-sm relative overflow-hidden group">
@@ -101,7 +202,7 @@ export default function Finance() {
                 </div>
                 <span className="text-yaron-charcoal dark:text-white font-medium">Pending Recovery</span>
               </div>
-              <p className="text-3xl font-bold text-yaron-charcoal dark:text-white mt-4">{formatCurrency(125000)}</p>
+              <p className="text-3xl font-bold text-yaron-charcoal dark:text-white mt-4">{formatCurrency(pendingRecovery)}</p>
             </Card>
           </div>
 
@@ -143,17 +244,16 @@ export default function Finance() {
                   onChange={(e) => setSelectedServiceFilter(e.target.value)}
                 >
                   <option value="All">All Services</option>
-                  <option value="Vocal Recording">Vocal Recording</option>
-                  <option value="Mixing">Mixing</option>
-                  <option value="Mastering">Mastering</option>
-                  <option value="Video Editing">Video Editing</option>
+                  {serviceData.map(d => (
+                    <option key={d.service} value={d.service}>{d.service}</option>
+                  ))}
                 </select>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredServiceData.map((data, i) => {
-                const average = data.revenue / data.count;
+                const average = data.count > 0 ? data.revenue / data.count : 0;
                 const Icon = data.icon;
                 return (
                   <div key={i} className="p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col justify-between">
@@ -181,6 +281,11 @@ export default function Finance() {
                   </div>
                 );
               })}
+              {filteredServiceData.length === 0 && (
+                <div className="col-span-1 md:col-span-2 text-center text-gray-500 py-8">
+                  No service data available.
+                </div>
+              )}
             </div>
           </Card>
         </div>
@@ -189,35 +294,44 @@ export default function Finance() {
       {activeTab === 'invoices' && (
         <Card className="flex-1 dark:bg-gray-900 dark:border-gray-800">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold text-yaron-charcoal dark:text-white">Recent Invoices</h2>
-            <Button variant="outline" size="sm" className="dark:border-gray-700 dark:text-white">Generate New</Button>
+            <h2 className="text-lg font-bold text-yaron-charcoal dark:text-white">Recent Invoices (Completed Works)</h2>
+            <Button variant="outline" size="sm" className="dark:border-gray-700 dark:text-white" onClick={handleDownloadReport}>Generate New</Button>
           </div>
           <div className="space-y-4">
-            {[1, 2, 3].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-yaron-magenta/30 transition-colors bg-gray-50/50 dark:bg-gray-800/50">
+            {recentInvoices.map((work, i) => (
+              <div key={work.id} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-yaron-magenta/30 transition-colors bg-gray-50/50 dark:bg-gray-800/50">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 rounded-lg bg-yaron-magenta/5 dark:bg-yaron-magenta/20 flex items-center justify-center text-yaron-magenta">
                     <FileText size={24} />
                   </div>
                   <div>
-                    <p className="font-bold text-yaron-charcoal dark:text-white">INV-2023-00{i+1}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Shibili Moonnakkal • Oct 12, 2023</p>
+                    <p className="font-bold text-yaron-charcoal dark:text-white">INV-{work.id.slice(-6)}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{work.customerId} • {work.createdAt ? format(work.createdAt, 'MMM dd, yyyy') : 'No date'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="text-right hidden sm:block">
-                    <p className="font-bold text-yaron-charcoal dark:text-white">{formatCurrency(15000)}</p>
-                    <p className="text-xs text-green-600 dark:text-green-400 font-bold mt-0.5 uppercase tracking-wider">Paid</p>
+                    <p className="font-bold text-yaron-charcoal dark:text-white">{formatCurrency(work.totalAmount)}</p>
+                    {work.totalAmount - (work.paidAmount || 0) <= 0 ? (
+                      <p className="text-xs text-green-600 dark:text-green-400 font-bold mt-0.5 uppercase tracking-wider">Paid</p>
+                    ) : (
+                      <p className="text-xs text-red-600 dark:text-red-400 font-bold mt-0.5 uppercase tracking-wider">Pending {formatCurrency(work.totalAmount - (work.paidAmount || 0))}</p>
+                    )}
                   </div>
-                  <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-charcoal dark:hover:text-white">
+                  <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-charcoal dark:hover:text-white" onClick={handleDownloadReport}>
                     <Download size={18} />
                   </Button>
                 </div>
               </div>
             ))}
+            {recentInvoices.length === 0 && (
+               <div className="text-center text-gray-500 py-6">No completed works to invoice yet.</div>
+            )}
           </div>
         </Card>
       )}
+
+      <NewExpenseModal isOpen={isExpenseModalOpen} onClose={() => setIsExpenseModalOpen(false)} />
     </div>
   );
 }

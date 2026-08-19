@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { updateWork } from '@/lib/api';
+import { updateWork, listenToWorks, deleteWork } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Plus, Search, Phone, MoreVertical, Edit2 } from 'lucide-react';
+import { Plus, Search, Phone, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { NewWorkModal } from '@/components/works/NewWorkModal';
-
-import { listenToWorks } from '@/lib/api';
+import { Modal } from '@/components/ui/Modal';
 import { Work } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import { format } from 'date-fns';
@@ -21,6 +20,11 @@ export default function Works() {
   const [selectedWork, setSelectedWork] = useState<any>(null);
   const [works, setWorks] = useState<any[]>([]);
   const { activeStudioId } = useAppStore();
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [workToDelete, setWorkToDelete] = useState<{id: string, title: string} | null>(null);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
@@ -70,6 +74,21 @@ export default function Works() {
       await updateWork(workId, { status: newStatus as any });
     } catch (error) {
       console.error("Failed to update status", error);
+    }
+  };
+
+  const confirmDeleteWork = async () => {
+    if (!workToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteWork(workToDelete.id);
+      setDeleteModalOpen(false);
+      setWorkToDelete(null);
+      setDeleteInput('');
+    } catch (error) {
+      console.error("Failed to delete work", error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -190,8 +209,8 @@ export default function Works() {
                       <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-magenta dark:hover:text-yaron-magenta" title="Edit Work" onClick={() => { setSelectedWork(work); setIsNewWorkModalOpen(true); }}>
                         <Edit2 size={16} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-charcoal dark:hover:text-white">
-                        <MoreVertical size={18} />
+                      <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500 dark:hover:text-red-400" title="Delete Work" onClick={() => { setWorkToDelete({ id: work.id, title: work.title }); setDeleteModalOpen(true); }}>
+                        <Trash2 size={16} />
                       </Button>
                     </div>
                   </td>
@@ -214,6 +233,38 @@ export default function Works() {
         onClose={() => { setIsNewWorkModalOpen(false); setSelectedWork(null); }}
         initialData={selectedWork}
       />
+
+      <Modal isOpen={deleteModalOpen} onClose={() => { setDeleteModalOpen(false); setDeleteInput(''); }} title="Confirm Deletion">
+        {workToDelete && (
+          <div className="space-y-4">
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-lg flex items-start space-x-3 text-sm">
+              <AlertTriangle className="shrink-0 mt-0.5 text-red-500" size={18} />
+              <p>Are you sure you want to delete <strong>{workToDelete.title}</strong>? This action cannot be undone.</p>
+            </div>
+            
+            <p className="text-sm text-gray-600 dark:text-gray-400">Type <span className="font-bold text-red-600">DELETE</span> to confirm.</p>
+            
+            <Input 
+              placeholder="DELETE" 
+              value={deleteInput}
+              onChange={e => setDeleteInput(e.target.value)}
+              autoFocus
+            />
+
+            <div className="pt-4 flex space-x-3">
+              <Button variant="outline" className="flex-1 dark:border-gray-700" onClick={() => { setDeleteModalOpen(false); setDeleteInput(''); }} disabled={isDeleting}>Cancel</Button>
+              <Button 
+                variant="danger" 
+                className="flex-1" 
+                disabled={deleteInput !== 'DELETE' || isDeleting}
+                onClick={confirmDeleteWork}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

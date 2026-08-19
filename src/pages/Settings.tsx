@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Users, Settings as SettingsIcon, LogOut, Moon, Sun, Plus, Building2, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Users, Settings as SettingsIcon, LogOut, Moon, Sun, Plus, Building2, Pencil, Trash2, AlertTriangle, Bell, BellOff } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
-  const { theme, toggleTheme, studios, addStudio, deleteStudio, staff, deleteStaff } = useAppStore();
+  const { theme, toggleTheme, studios, addStudio, deleteStudio, staff, addStaff, updateStaff, deleteStaff } = useAppStore();
   const { user, signOut } = useAuthStore();
   const navigate = useNavigate();
   
@@ -22,6 +22,14 @@ export default function Settings() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string, name: string, type: 'studio' | 'staff' } | null>(null);
   const [deleteInput, setDeleteInput] = useState('');
+
+  // Staff Modal State
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [staffFormData, setStaffFormData] = useState({ id: '', name: '', position: '' });
+  const [isEditingStaff, setIsEditingStaff] = useState(false);
+
+  // Notifications State
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const handleAddStudio = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +43,41 @@ export default function Settings() {
     setNewStudioName('');
     setNewStudioAdmin('');
     setIsAddStudioOpen(false);
+  };
+
+  const handleSaveStaff = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffFormData.name || !staffFormData.position) return;
+
+    if (isEditingStaff) {
+      updateStaff(staffFormData.id, { name: staffFormData.name, position: staffFormData.position });
+    } else {
+      addStaff({
+        id: Date.now().toString(),
+        name: staffFormData.name,
+        position: staffFormData.position,
+        phone: '',
+        joiningDate: Date.now(),
+        salary: 0,
+        status: 'active'
+      });
+    }
+    
+    setIsStaffModalOpen(false);
+    setStaffFormData({ id: '', name: '', position: '' });
+    setIsEditingStaff(false);
+  };
+
+  const openAddStaff = () => {
+    setStaffFormData({ id: '', name: '', position: '' });
+    setIsEditingStaff(false);
+    setIsStaffModalOpen(true);
+  };
+
+  const openEditStaff = (member: any) => {
+    setStaffFormData({ id: member.id, name: member.name, position: member.position });
+    setIsEditingStaff(true);
+    setIsStaffModalOpen(true);
   };
 
   const confirmDelete = () => {
@@ -110,7 +153,7 @@ export default function Settings() {
                     <p className="text-xs text-gray-500">{member.position}</p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" className="dark:border-gray-700">Manage</Button>
+                    <Button variant="outline" size="sm" className="dark:border-gray-700" onClick={() => openEditStaff(member)}>Manage</Button>
                     <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => { setItemToDelete({ id: member.id, name: member.name, type: 'staff' }); setDeleteModalOpen(true); }}>
                       <Trash2 size={16} />
                     </Button>
@@ -118,7 +161,7 @@ export default function Settings() {
                 </div>
               ))}
             </div>
-            <Button className="w-full mt-4" variant="secondary">
+            <Button className="w-full mt-4" variant="secondary" onClick={openAddStaff}>
               <Users size={18} className="mr-2" /> Add Staff Member
             </Button>
           </Card>
@@ -146,9 +189,15 @@ export default function Settings() {
                 </button>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 dark:text-gray-300 font-medium">Notifications</span>
-                <button className="w-12 h-6 bg-yaron-magenta rounded-full relative cursor-pointer focus:outline-none">
-                  <div className="absolute left-7 top-1 w-4 h-4 bg-white rounded-full transition-transform"></div>
+                <div className="flex items-center space-x-2">
+                  {notificationsEnabled ? <Bell size={16} className="text-gray-500" /> : <BellOff size={16} className="text-gray-400" />}
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">Notifications</span>
+                </div>
+                <button 
+                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                  className={cn("w-12 h-6 rounded-full relative transition-colors focus:outline-none", notificationsEnabled ? "bg-yaron-magenta" : "bg-gray-200")}
+                >
+                  <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-transform", notificationsEnabled ? "left-7" : "left-1")}></div>
                 </button>
               </div>
             </div>
@@ -167,6 +216,31 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Staff Modal */}
+      <Modal isOpen={isStaffModalOpen} onClose={() => setIsStaffModalOpen(false)} title={isEditingStaff ? "Edit Staff" : "Add New Staff"}>
+        <form onSubmit={handleSaveStaff} className="space-y-4">
+          <Input 
+            label="Name" 
+            placeholder=""
+            value={staffFormData.name}
+            onChange={e => setStaffFormData({...staffFormData, name: e.target.value})}
+            required
+            autoFocus
+          />
+          <Input 
+            label="Position / Role" 
+            placeholder=""
+            value={staffFormData.position}
+            onChange={e => setStaffFormData({...staffFormData, position: e.target.value})}
+            required
+          />
+          <div className="pt-4 flex space-x-3">
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsStaffModalOpen(false)}>Cancel</Button>
+            <Button type="submit" className="flex-1 bg-yaron-gradient text-white border-none">{isEditingStaff ? 'Save Changes' : 'Add Staff'}</Button>
+          </div>
+        </form>
+      </Modal>
+
       <Modal isOpen={isAddStudioOpen} onClose={() => setIsAddStudioOpen(false)} title="Add New Studio">
         <form onSubmit={handleAddStudio} className="space-y-4">
           <Input 
@@ -184,7 +258,7 @@ export default function Settings() {
           />
           <div className="pt-4 flex space-x-3">
             <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsAddStudioOpen(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1" disabled={!newStudioName || !newStudioAdmin}>Add Studio</Button>
+            <Button type="submit" className="flex-1 bg-yaron-gradient text-white border-none" disabled={!newStudioName || !newStudioAdmin}>Add Studio</Button>
           </div>
         </form>
       </Modal>
