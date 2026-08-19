@@ -19,7 +19,7 @@ export default {
         }
       },
       backgroundImage: {
-        'yaron-gradient': 'linear-gradient(to right, #C72D5C, #7B2B91, #F45B0A, #F5A414)',
+        'yaron-gradient': 'linear-gradient(to right, #C72D5C, #F45B0A)',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
