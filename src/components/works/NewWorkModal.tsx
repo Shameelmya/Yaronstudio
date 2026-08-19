@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createWork, createCustomer, updateWork } from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -70,10 +71,54 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
     onClose();
   };
 
-  const onSubmit = (data: any) => {
-    console.log("Submitting work data", data);
-    // Submit to Firebase logic here
-    resetState();
+  const onSubmit = async (data: any) => {
+    try {
+      const studioId = useAppStore.getState().activeStudioId;
+      if (!studioId) throw new Error("No active studio selected");
+
+      let customerId = existingCustomer?.id;
+
+      if (!existingCustomer) {
+        customerId = Date.now().toString(); // simple ID generation
+        await createCustomer({
+          id: customerId,
+          name: data.name,
+          phone: data.phone,
+          place: data.place || '',
+          whatsapp: data.whatsapp || data.phone,
+          studioId,
+          createdAt: new Date(),
+        });
+      }
+
+      if (initialData) {
+        await updateWork(initialData.id, {
+          title: data.workTitle,
+          dueDate: new Date(data.dueDate),
+          services: data.services || [],
+          totalAmount: Number(data.totalAmount),
+          paidAmount: Number(data.paidAmount) || 0,
+        });
+      } else {
+        await createWork({
+          id: Date.now().toString(),
+          title: data.workTitle,
+          customerId: customerId,
+          studioId,
+          services: data.services || [],
+          status: 'pending',
+          totalAmount: Number(data.totalAmount),
+          paidAmount: Number(data.paidAmount) || 0,
+          createdAt: new Date(),
+          dueDate: new Date(data.dueDate),
+        });
+      }
+
+      resetState();
+    } catch (error) {
+      console.error("Error submitting form", error);
+      alert("Failed to save work");
+    }
   };
 
   const handleAddCustomService = () => {

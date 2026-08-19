@@ -13,7 +13,8 @@ export interface Customer {
   place: string;
   whatsapp: string;
   careOf?: string;
-  createdAt: number;
+  studioId: string;
+  createdAt: Date;
 }
 
 export type WorkStatus = 'active' | 'completed' | 'cancelled';
@@ -21,8 +22,10 @@ export type PaymentStatus = 'paid' | 'pending';
 
 export interface Work {
   id: string;
+  studioId: string;
   customerId: string;
   title: string;
+  services: string[];
   totalAmount: number;
   paidAmount: number;
   status: 'pending' | 'in_progress' | 'completed' | 'delivered' | 'cancelled';
@@ -49,6 +52,7 @@ export interface Payment {
 
 export interface Booking {
   id: string;
+  studioId: string;
   workId: string;
   customerId: string;
   service: string;

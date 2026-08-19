@@ -1,21 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency } from '@/lib/utils';
 import { Plus, IndianRupee, Clock, TrendingUp, AlertCircle, Music, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
+import { useAppStore } from '@/store/useAppStore';
+import { listenToWorks, listenToBookings, updateBookingStatus } from '@/lib/api';
+import { format, isBefore, startOfDay } from 'date-fns';
 
 export default function Home() {
   const navigate = useNavigate();
   const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false);
   const [selectedOverdueWork, setSelectedOverdueWork] = useState<any>(null);
 
-  // Mock overdue data
-  const overdueWorks = [
-    { id: '1', title: 'Msf song Purameri', customer: 'Shibili', due: '2023-10-25', pending: 2800 },
-    { id: '2', title: 'Wedding Highlight BGM', customer: 'Ameen', due: '2023-10-26', pending: 5000 },
-  ];
+  const [overdueWorks, setOverdueWorks] = useState<any[]>([]);
+  const [recentWorks, setRecentWorks] = useState<any[]>([]);
+  const [todayBookings, setTodayBookings] = useState<any[]>([]);
+  const { activeStudioId } = useAppStore();
+  
+  useEffect(() => {
+    if (!activeStudioId) return;
+    
+    const unsubWorks = listenToWorks(activeStudioId, (works) => {
+      const today = startOfDay(new Date());
+      const overdue = works.filter(w => w.status !== 'completed' && w.status !== 'delivered' && w.dueDate && isBefore(w.dueDate, today)).map(w => ({
+        id: w.id, title: w.title, customer: w.customerId, due: format(w.dueDate!, 'yyyy-MM-dd'), pending: w.totalAmount - (w.paidAmount || 0)
+      }));
+      setOverdueWorks(overdue);
+      
+      const recent = works.slice(0, 3).map(w => ({
+         id: w.id, title: w.title, pending: w.totalAmount - (w.paidAmount || 0)
+      }));
+      setRecentWorks(recent);
+    });
+    
+    const unsubBookings = listenToBookings(activeStudioId, (bookings) => {
+      const todayString = format(new Date(), 'yyyy-MM-dd');
+      const todaySessions = bookings
+        .filter(b => format(new Date(b.date), 'yyyy-MM-dd') === todayString)
+        .map(b => ({
+          id: b.id, title: b.service, work: 'Work ID: ' + b.workId, customer: b.customerId, time: new Date(b.date), status: b.status
+        }));
+      setTodayBookings(todaySessions);
+    });
+
+    return () => { unsubWorks(); unsubBookings(); };
+  }, [activeStudioId]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

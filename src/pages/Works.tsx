@@ -7,12 +7,10 @@ import { Plus, Search, Phone, MoreVertical, Edit2 } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { NewWorkModal } from '@/components/works/NewWorkModal';
 
-const mockWorks = [
-  { id: '1', title: 'Album Song 01', customer: 'Shibili Moonnakkal', services: ['Vocal Recording', 'Mixing'], phone: '9876543210', status: 'pending', total: 25000, pending: 5000, due: '2023-10-30' },
-  { id: '2', title: 'Wedding Highlight BGM', customer: 'Ameen', services: ['BGM Scoring'], phone: '9123456780', status: 'in_progress', total: 15000, pending: 0, due: '2023-10-25' },
-  { id: '3', title: 'Corporate Ad Music', customer: 'Yaron Studio', services: ['Programming', 'Mastering'], phone: '9988776655', status: 'completed', total: 30000, pending: 30000, due: '2023-11-05' },
-  { id: '4', title: 'Short Film Dubbing', customer: 'Nishad', services: ['Dubbing', 'Foley'], phone: '9988112233', status: 'delivered', total: 8000, pending: 0, due: '2023-10-20' },
-];
+import { listenToWorks } from '@/lib/api';
+import { Work } from '@/types';
+import { useAppStore } from '@/store/useAppStore';
+import { format } from 'date-fns';
 
 export default function Works() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -20,6 +18,8 @@ export default function Works() {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWork, setSelectedWork] = useState<any>(null);
+  const [works, setWorks] = useState<any[]>([]);
+  const { activeStudioId } = useAppStore();
 
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
@@ -29,6 +29,26 @@ export default function Works() {
     }
   }, [searchParams, setSearchParams]);
 
+  useEffect(() => {
+    if (!activeStudioId) return;
+    const unsubscribe = listenToWorks(activeStudioId, (fetchedWorks) => {
+      // transform Work to match our UI for now, or just use Work directly
+      const transformedWorks = fetchedWorks.map(w => ({
+        id: w.id,
+        title: w.title,
+        customer: w.customerId, // Should join with customers in reality, but keeping it simple
+        services: w.services || [],
+        phone: 'N/A', // Mocking phone since we don't have customer join yet
+        status: w.status,
+        total: w.totalAmount,
+        pending: w.totalAmount - (w.paidAmount || 0),
+        due: w.dueDate ? format(w.dueDate, 'yyyy-MM-dd') : 'No Date'
+      }));
+      setWorks(transformedWorks);
+    });
+    return () => unsubscribe();
+  }, [activeStudioId]);
+
   const filters = [
     { id: 'all', label: 'All Works' },
     { id: 'pending', label: 'Pending' },
@@ -37,7 +57,7 @@ export default function Works() {
     { id: 'delivered', label: 'Delivered' },
   ];
 
-  const filteredWorks = mockWorks.filter(work => {
+  const filteredWorks = works.filter(work => {
     const matchesFilter = activeFilter === 'all' || work.status === activeFilter;
     const matchesSearch = work.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           work.customer.toLowerCase().includes(searchQuery.toLowerCase());
