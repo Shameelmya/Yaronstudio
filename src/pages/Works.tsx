@@ -203,8 +203,8 @@ export default function Works() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto -mx-5 px-5">
-          <table className="w-full text-left border-collapse">
+        <div className="flex-1 overflow-x-auto -mx-5 px-5 pb-4">
+          <table className="w-full min-w-[900px] text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400">
                 <th className="pb-3 font-medium whitespace-nowrap">Work Title</th>
