@@ -78,69 +78,67 @@ export default function Home() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-yaron-charcoal dark:text-white">Overview</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Welcome to Yaron Studio</p>
+          <div className="flex items-center space-x-3">
+            <h1 className="text-2xl font-bold text-yaron-charcoal dark:text-white">Overview</h1>
+            <Button onClick={() => navigate('/works?new=true')} size="icon" className="w-8 h-8 rounded-full shadow-md bg-yaron-gradient border-none hover:opacity-90">
+              <Plus size={16} className="text-white" />
+            </Button>
+          </div>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Welcome to Yaron Studio</p>
         </div>
-        <Button onClick={() => navigate('/works?new=true')} className="w-full sm:w-auto shadow-md h-12 text-base bg-yaron-gradient border-none">
-          <Plus size={20} className="mr-2" />
-          New Work
-        </Button>
       </div>
 
       {/* Primary Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 hide-scrollbar">
         
         {/* Overdue Works Counter */}
         <Card 
-          className="bg-red-500 border-none shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md transition-all group"
+          className="bg-red-500 border-none shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md transition-all group min-w-[160px] flex-1 shrink-0 snap-center p-4"
           onClick={() => setIsOverdueModalOpen(true)}
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shadow-sm">
-              <AlertCircle className="text-white" size={20} />
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-sm shrink-0">
+              <AlertCircle className="text-white" size={16} />
             </div>
-            <span className="text-white font-medium">Overdue Works</span>
+            <span className="text-white text-xs font-medium whitespace-nowrap">Overdue</span>
           </div>
-          <p className="text-3xl font-bold text-white mt-4">{overdueWorks.length}</p>
-          <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="text-xs font-semibold text-white flex items-center">View List &rarr;</span>
-          </div>
+          <p className="text-2xl font-bold text-white mt-2">{overdueWorks.length}</p>
         </Card>
 
-        <Card className="bg-yaron-magenta border-none shadow-sm relative overflow-hidden">
+        <Card className="bg-yaron-magenta border-none shadow-sm relative overflow-hidden min-w-[160px] flex-1 shrink-0 snap-center p-4">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shadow-sm">
-              <Clock className="text-white" size={20} />
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-sm shrink-0">
+              <Clock className="text-white" size={16} />
             </div>
-            <span className="text-white font-medium">Pending Payments</span>
+            <span className="text-white text-xs font-medium whitespace-nowrap">Pending</span>
           </div>
-          <p className="text-3xl font-bold text-white mt-4">{formatCurrency(totalPendingPayments)}</p>
+          <p className="text-2xl font-bold text-white mt-2">{formatCurrency(totalPendingPayments)}</p>
         </Card>
 
-        <Card className="bg-yaron-orange border-none shadow-sm relative overflow-hidden">
+        <Card className="bg-yaron-orange border-none shadow-sm relative overflow-hidden min-w-[160px] flex-1 shrink-0 snap-center p-4">
            <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shadow-sm">
-              <TrendingUp className="text-white" size={20} />
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-sm shrink-0">
+              <TrendingUp className="text-white" size={16} />
             </div>
-            <span className="text-white font-medium">Income (This Month)</span>
+            <span className="text-white text-xs font-medium whitespace-nowrap">Income (Mo)</span>
           </div>
-          <p className="text-3xl font-bold text-white mt-4">{formatCurrency(incomeThisMonth)}</p>
+          <p className="text-2xl font-bold text-white mt-2">{formatCurrency(incomeThisMonth)}</p>
         </Card>
 
-        <Card className="bg-yaron-purple border-none shadow-sm relative overflow-hidden">
+        <Card className="bg-yaron-purple border-none shadow-sm relative overflow-hidden min-w-[160px] flex-1 shrink-0 snap-center p-4">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shadow-sm">
-              <Music className="text-white" size={20} />
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-sm shrink-0">
+              <Music className="text-white" size={16} />
             </div>
-            <span className="text-white font-medium">Active Works</span>
+            <span className="text-white text-xs font-medium whitespace-nowrap">Active</span>
           </div>
-          <p className="text-3xl font-bold text-white mt-4">{activeWorksCount}</p>
+          <p className="text-2xl font-bold text-white mt-2">{activeWorksCount}</p>
         </Card>
       </div>
 

@@ -24,33 +24,34 @@ export const BottomNav = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 pb-safe sm:hidden z-50 transition-colors">
-      <div className="flex justify-around items-center h-16">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-                           (item.path !== '/' && location.pathname.startsWith(item.path));
-          const Icon = item.icon;
-          
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={cn(
-                "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors",
-                isActive ? "text-yaron-magenta" : "text-yaron-gray hover:text-yaron-charcoal dark:text-gray-400 dark:hover:text-white"
-              )}
-            >
-              <div className="relative">
-                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-                {isActive && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-yaron-orange rounded-full" />
-                )}
-              </div>
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
+    <nav className="fixed bottom-3 left-4 right-4 bg-yaron-gradient h-[85px] rounded-[24px] z-50 flex justify-around items-center px-1 shadow-[0_8px_32px_rgba(199,45,92,0.3)] border border-white/10 sm:hidden">
+      {navItems.map((item) => {
+        const isActive = location.pathname === item.path || 
+                         (item.path !== '/' && location.pathname.startsWith(item.path));
+        const Icon = item.icon;
+        
+        return (
+          <button
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            className="flex flex-col items-center justify-center w-[58px] gap-1 transition-all"
+          >
+            <div className={cn(
+              "flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-300",
+              isActive ? "bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]" : "bg-white/15"
+            )}>
+              <Icon size={24} className={cn(
+                "transition-all duration-300",
+                isActive ? "text-yaron-magenta" : "text-white/80"
+              )} strokeWidth={isActive ? 2.5 : 2} />
+            </div>
+            <span className={cn(
+              "text-[10px] font-semibold transition-colors duration-300",
+              isActive ? "text-white" : "text-white/60"
+            )}>{item.label}</span>
+          </button>
+        );
+      })}
     </nav>
   );
 };
@@ -164,7 +165,7 @@ export default function MainLayout() {
   return (
     <div className={cn("min-h-screen flex transition-colors", "bg-yaron-light dark:bg-gray-950 dark:text-white")}>
       <Sidebar />
-      <div className="flex-1 flex flex-col sm:ml-64 w-full max-w-full pb-16 sm:pb-0 relative min-h-screen">
+      <div className="flex-1 flex flex-col sm:ml-64 w-full max-w-full pb-[110px] sm:pb-0 relative min-h-screen">
         <Header />
         <main className="flex-1 overflow-x-hidden p-4 sm:p-8">
           <div className="max-w-6xl mx-auto">
