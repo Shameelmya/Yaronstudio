@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { updateWork } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -64,31 +65,38 @@ export default function Works() {
     return matchesFilter && matchesSearch;
   });
 
-  const getStatusBadge = (status: string, pendingAmount: number) => {
-    const isFullyPaid = pendingAmount <= 0;
-    
-    let colorClass = '';
-    let label = '';
-    
-    switch (status) {
-      case 'pending': colorClass = 'bg-yaron-orange/10 text-yaron-orange dark:bg-orange-900/30 dark:text-orange-400'; label = 'Pending'; break;
-      case 'in_progress': colorClass = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'; label = 'In Progress'; break;
-      case 'completed': colorClass = 'bg-yaron-purple/10 text-yaron-purple dark:bg-purple-900/30 dark:text-purple-400'; label = 'Completed'; break;
-      case 'delivered': colorClass = 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'; label = 'Delivered'; break;
-      case 'cancelled': colorClass = 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'; label = 'Cancelled'; break;
+  const handleStatusChange = async (workId: string, newStatus: string) => {
+    try {
+      await updateWork(workId, { status: newStatus as any });
+    } catch (error) {
+      console.error("Failed to update status", error);
     }
+  };
+
+  const getStatusDropdown = (work: any) => {
+    const statusClasses: Record<string, string> = {
+      'pending': 'bg-yaron-orange/10 text-yaron-orange dark:bg-orange-900/30 dark:text-orange-400',
+      'in_progress': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      'completed': 'bg-yaron-purple/10 text-yaron-purple dark:bg-purple-900/30 dark:text-purple-400',
+      'delivered': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      'cancelled': 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+    };
 
     return (
-      <div className="flex flex-col space-y-1 items-start">
-        <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider", colorClass)}>
-          {label}
-        </span>
-        {isFullyPaid && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-500 text-white shadow-sm">
-            FULLY PAID
-          </span>
+      <select
+        value={work.status}
+        onChange={(e) => handleStatusChange(work.id, e.target.value)}
+        className={cn(
+          "px-2 py-1 rounded text-xs font-bold uppercase tracking-wider cursor-pointer outline-none border-none appearance-none",
+          statusClasses[work.status] || statusClasses['pending']
         )}
-      </div>
+      >
+        <option value="pending">Pending</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="delivered">Delivered</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
     );
   };
 
@@ -167,7 +175,7 @@ export default function Works() {
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{work.due}</span>
                   </td>
                   <td className="py-4">
-                    {getStatusBadge(work.status, work.pending)}
+                    {getStatusDropdown(work)}
                   </td>
                   <td className="py-4 text-right font-bold text-yaron-charcoal dark:text-white">
                     {formatCurrency(work.total)}
