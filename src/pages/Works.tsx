@@ -10,12 +10,13 @@ import { NewWorkModal } from '@/components/works/NewWorkModal';
 import { Modal } from '@/components/ui/Modal';
 import { Work } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
-import { format } from 'date-fns';
+import { format, isSameDay, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 
 export default function Works() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isNewWorkModalOpen, setIsNewWorkModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWork, setSelectedWork] = useState<any>(null);
   const [works, setWorks] = useState<any[]>([]);
@@ -47,7 +48,8 @@ export default function Works() {
         status: w.status,
         total: w.totalAmount,
         pending: w.totalAmount - (w.paidAmount || 0),
-        due: w.dueDate ? format(w.dueDate, 'yyyy-MM-dd') : 'No Date'
+        due: w.dueDate ? format(w.dueDate, 'yyyy-MM-dd') : 'No Date',
+        rawDueDate: w.dueDate ? (w.dueDate instanceof Date ? w.dueDate : new Date(w.dueDate)) : null
       }));
       setWorks(transformedWorks);
     });
@@ -66,7 +68,22 @@ export default function Works() {
     const matchesFilter = activeFilter === 'all' || work.status === activeFilter;
     const matchesSearch = work.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           work.customer.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
+                          
+    let matchesTime = true;
+    if (timeFilter !== 'all' && work.rawDueDate) {
+      const today = new Date();
+      if (timeFilter === 'today') {
+        matchesTime = isSameDay(work.rawDueDate, today);
+      } else if (timeFilter === 'week') {
+        matchesTime = isWithinInterval(work.rawDueDate, { start: startOfWeek(today), end: endOfWeek(today) });
+      } else if (timeFilter === 'month') {
+        matchesTime = isWithinInterval(work.rawDueDate, { start: startOfMonth(today), end: endOfMonth(today) });
+      }
+    } else if (timeFilter !== 'all' && !work.rawDueDate) {
+      matchesTime = false;
+    }
+
+    return matchesFilter && matchesSearch && matchesTime;
   });
 
   const handleStatusChange = async (workId: string, newStatus: string) => {
@@ -142,6 +159,20 @@ export default function Works() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-12 text-base"
             />
+          </div>
+          <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl shrink-0 h-12 w-full sm:w-auto">
+            {['all', 'today', 'week', 'month'].map((v) => (
+              <button
+                key={v}
+                onClick={() => setTimeFilter(v as any)}
+                className={cn(
+                  "flex-1 sm:flex-none sm:px-6 py-1 rounded-lg text-sm font-medium transition-all capitalize whitespace-nowrap flex items-center justify-center",
+                  timeFilter === v ? "bg-white dark:bg-gray-700 text-yaron-charcoal dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-yaron-charcoal dark:hover:text-white"
+                )}
+              >
+                {v === 'all' ? 'All Time' : v}
+              </button>
+            ))}
           </div>
         </div>
 
