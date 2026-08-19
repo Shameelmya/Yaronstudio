@@ -130,7 +130,7 @@ export default function Finance() {
   }, [works]);
 
   const handleDownloadReport = () => {
-    alert("Report generation will be implemented in future versions.");
+    window.print();
   };
 
   return (

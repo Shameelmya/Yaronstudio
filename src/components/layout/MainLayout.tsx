@@ -73,7 +73,7 @@ export const Sidebar = () => {
     <aside className="hidden sm:flex flex-col w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 fixed left-0 top-0 transition-colors">
       <div className="h-24 flex items-center px-6 border-b border-gray-100 dark:border-gray-800">
         <img src="/yaron logo.png" alt="Yaron Studio" className="h-16 w-16 object-contain mr-3" />
-        <h1 className="font-bold text-2xl text-yaron-charcoal dark:text-white tracking-tight">Yaron <span className="text-yaron-magenta">Studio</span></h1>
+        <h1 className="font-bold text-xl text-yaron-charcoal dark:text-white tracking-tight whitespace-nowrap">Yaron <span className="text-yaron-magenta">Studio</span></h1>
       </div>
       
       <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
