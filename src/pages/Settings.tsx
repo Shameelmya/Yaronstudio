@@ -7,13 +7,14 @@ import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createStaffApi, updateStaffApi, deleteStaffApi, createStudioApi, updateStudioApi, deleteStudioApi } from '@/lib/api';
 
 export default function Settings() {
   const { theme, toggleTheme, studios, addStudio, updateStudio, deleteStudio, staff, addStaff, updateStaff, deleteStaff } = useAppStore();
   const { user, signOut } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [isAddStudioOpen, setIsAddStudioOpen] = useState(false);
   const [newStudioName, setNewStudioName] = useState('');
@@ -28,7 +29,7 @@ export default function Settings() {
   const [deleteInput, setDeleteInput] = useState('');
 
   // Staff Modal State
-  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const isStaffModalOpen = location.hash === '#staff-modal';
   const [staffFormData, setStaffFormData] = useState({ id: '', name: '', position: '' });
   const [isEditingStaff, setIsEditingStaff] = useState(false);
 
@@ -79,7 +80,7 @@ export default function Settings() {
       });
     }
     
-    setIsStaffModalOpen(false);
+    navigate(-1); // close modal
     setStaffFormData({ id: '', name: '', position: '' });
     setIsEditingStaff(false);
   };
@@ -87,13 +88,13 @@ export default function Settings() {
   const openAddStaff = () => {
     setStaffFormData({ id: '', name: '', position: '' });
     setIsEditingStaff(false);
-    setIsStaffModalOpen(true);
+    navigate('#staff-modal');
   };
 
   const openEditStaff = (member: any) => {
     setStaffFormData({ id: member.id, name: member.name, position: member.position });
     setIsEditingStaff(true);
-    setIsStaffModalOpen(true);
+    navigate('#staff-modal');
   };
 
   const confirmDelete = async () => {
@@ -226,7 +227,7 @@ export default function Settings() {
       </div>
 
       {/* Staff Modal */}
-      <Modal isOpen={isStaffModalOpen} onClose={() => setIsStaffModalOpen(false)} title={isEditingStaff ? "Edit Staff" : "Add New Staff"}>
+      <Modal isOpen={isStaffModalOpen} onClose={() => navigate(-1)} title={isEditingStaff ? "Edit Staff" : "Add New Staff"}>
         <form onSubmit={handleSaveStaff} className="space-y-4">
           <Input 
             label="Name" 
@@ -244,7 +245,7 @@ export default function Settings() {
             required
           />
           <div className="pt-4 flex space-x-3">
-            <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsStaffModalOpen(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => navigate(-1)}>Cancel</Button>
             <Button type="submit" className="flex-1 bg-yaron-gradient text-white border-none">{isEditingStaff ? 'Save Changes' : 'Add Staff'}</Button>
           </div>
         </form>
