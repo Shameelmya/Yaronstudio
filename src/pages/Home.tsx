@@ -66,52 +66,53 @@ export default function Home() {
         
         {/* Overdue Works Counter */}
         <Card 
-          className="bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-900/10 border-red-200 dark:border-red-900/30 shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md transition-all group"
+          className="bg-red-500 border-none shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md transition-all group"
           onClick={() => setIsOverdueModalOpen(true)}
         >
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-500/10 rounded-full blur-2xl group-hover:bg-red-500/20 transition-all"></div>
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-white dark:bg-red-900/50 flex items-center justify-center shadow-sm">
-              <AlertCircle className="text-red-500 dark:text-red-400" size={20} />
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shadow-sm">
+              <AlertCircle className="text-white" size={20} />
             </div>
-            <span className="text-red-900 dark:text-red-300 font-medium">Overdue Works</span>
+            <span className="text-white font-medium">Overdue Works</span>
           </div>
-          <p className="text-3xl font-bold text-red-700 dark:text-red-400 mt-4">2</p>
+          <p className="text-3xl font-bold text-white mt-4">{overdueWorks.length}</p>
           <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="text-xs font-semibold text-red-600 dark:text-red-400 flex items-center">View List &rarr;</span>
+            <span className="text-xs font-semibold text-white flex items-center">View List &rarr;</span>
           </div>
         </Card>
 
-        <Card className="bg-gradient-to-br from-yaron-magenta/5 to-yaron-purple/5 dark:from-yaron-magenta/10 dark:to-yaron-purple/10 border-none shadow-sm relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-yaron-magenta/10 rounded-full blur-2xl"></div>
+        <Card className="bg-yaron-magenta border-none shadow-sm relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
-              <Clock className="text-yaron-magenta" size={20} />
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shadow-sm">
+              <Clock className="text-white" size={20} />
             </div>
-            <span className="text-gray-600 dark:text-gray-300 font-medium">Pending Payments</span>
+            <span className="text-white font-medium">Pending Payments</span>
           </div>
-          <p className="text-3xl font-bold text-yaron-charcoal dark:text-white mt-4">{formatCurrency(125000)}</p>
+          <p className="text-3xl font-bold text-white mt-4">{formatCurrency(125000)}</p>
         </Card>
 
-        <Card className="bg-gradient-to-br from-yaron-orange/5 to-yaron-gold/5 dark:from-yaron-orange/10 dark:to-yaron-gold/10 border-none shadow-sm relative overflow-hidden">
-           <div className="absolute -right-4 -top-4 w-24 h-24 bg-yaron-orange/10 rounded-full blur-2xl"></div>
+        <Card className="bg-yaron-orange border-none shadow-sm relative overflow-hidden">
+           <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
-              <TrendingUp className="text-yaron-orange" size={20} />
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shadow-sm">
+              <TrendingUp className="text-white" size={20} />
             </div>
-            <span className="text-gray-600 dark:text-gray-300 font-medium">Income (This Month)</span>
+            <span className="text-white font-medium">Income (This Month)</span>
           </div>
-          <p className="text-3xl font-bold text-yaron-charcoal dark:text-white mt-4">{formatCurrency(450000)}</p>
+          <p className="text-3xl font-bold text-white mt-4">{formatCurrency(450000)}</p>
         </Card>
 
-        <Card className="dark:bg-gray-900 dark:border-gray-800">
+        <Card className="bg-yaron-purple border-none shadow-sm relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-yaron-purple/10 dark:bg-yaron-purple/20 flex items-center justify-center shadow-sm">
-              <Music className="text-yaron-purple dark:text-purple-400" size={20} />
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shadow-sm">
+              <Music className="text-white" size={20} />
             </div>
-            <span className="text-gray-600 dark:text-gray-300 font-medium">Active Works</span>
+            <span className="text-white font-medium">Active Works</span>
           </div>
-          <p className="text-2xl font-bold text-yaron-charcoal dark:text-white mt-4">24</p>
+          <p className="text-3xl font-bold text-white mt-4">24</p>
         </Card>
       </div>
 

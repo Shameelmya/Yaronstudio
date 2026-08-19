@@ -5,8 +5,15 @@ import { Plus, Calendar as CalendarIcon, Clock, User, Music, CheckCircle2, XCirc
 import { cn } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
 
+import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/Input';
+import { AlertCircle } from 'lucide-react';
+
 export default function Bookings() {
   const [view, setView] = useState<'today' | 'week' | 'month'>('today');
+  const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
+  const [newBookingData, setNewBookingData] = useState({ title: '', customer: '', date: '', time: '' });
+  const [bookingError, setBookingError] = useState('');
 
   const today = new Date();
   
@@ -22,6 +29,50 @@ export default function Bookings() {
     setBookings(bookings.map(b => b.id === id ? { ...b, status } : b));
   };
 
+  const handleCreateBooking = (e: React.FormEvent) => {
+    e.preventDefault();
+    setBookingError('');
+
+    if (!newBookingData.date || !newBookingData.time || !newBookingData.customer) return;
+
+    // Parse the input date and time to create a Date object
+    const [year, month, day] = newBookingData.date.split('-').map(Number);
+    const [hour, minute] = newBookingData.time.split(':').map(Number);
+    
+    const newBookingTime = new Date(year, month - 1, day, hour, minute);
+    
+    // Check for duplicates
+    // Assuming a booking takes roughly 1 hour block for simplicity in this check, 
+    // or we can just check if they are in the same hour
+    const isDuplicate = bookings.some(b => {
+      return (
+        b.time.getFullYear() === newBookingTime.getFullYear() &&
+        b.time.getMonth() === newBookingTime.getMonth() &&
+        b.time.getDate() === newBookingTime.getDate() &&
+        b.time.getHours() === newBookingTime.getHours()
+      );
+    });
+
+    if (isDuplicate) {
+      const duplicateBooking = bookings.find(b => b.time.getHours() === newBookingTime.getHours() && b.time.getDate() === newBookingTime.getDate());
+      setBookingError(`${duplicateBooking?.customer}'s work is booked for this time. No other booking allowed.`);
+      return;
+    }
+
+    setBookings([...bookings, {
+      id: Date.now(),
+      time: newBookingTime,
+      title: newBookingData.title || 'Studio Session',
+      work: 'New Work',
+      customer: newBookingData.customer,
+      duration: '1 Hour',
+      status: 'scheduled'
+    }]);
+
+    setIsNewBookingOpen(false);
+    setNewBookingData({ title: '', customer: '', date: '', time: '' });
+  };
+
   const filteredBookings = bookings.filter(b => {
     if (view === 'today') return b.time.getDate() === today.getDate();
     return true; // Simple mock for week/month
@@ -34,7 +85,7 @@ export default function Bookings() {
           <h1 className="text-2xl font-bold text-yaron-charcoal dark:text-white">Bookings</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">Schedule and manage studio sessions</p>
         </div>
-        <Button className="w-full sm:w-auto shadow-md h-12 text-base bg-yaron-gradient border-none">
+        <Button onClick={() => setIsNewBookingOpen(true)} className="w-full sm:w-auto shadow-md h-12 text-base bg-yaron-gradient border-none">
           <Plus size={20} className="mr-2" />
           New Booking
         </Button>
@@ -158,6 +209,51 @@ export default function Bookings() {
           </Card>
         </div>
       </div>
+      <Modal isOpen={isNewBookingOpen} onClose={() => { setIsNewBookingOpen(false); setBookingError(''); }} title="New Booking">
+        <form onSubmit={handleCreateBooking} className="space-y-4">
+          {bookingError && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-sm rounded-lg flex items-start space-x-2 border border-red-200 dark:border-red-900/30">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <p>{bookingError}</p>
+            </div>
+          )}
+          <Input 
+            label="Customer Name" 
+            placeholder="e.g. Ameen"
+            value={newBookingData.customer}
+            onChange={e => setNewBookingData({...newBookingData, customer: e.target.value})}
+            required
+            autoFocus
+          />
+          <Input 
+            label="Service / Title" 
+            placeholder="e.g. Vocal Recording"
+            value={newBookingData.title}
+            onChange={e => setNewBookingData({...newBookingData, title: e.target.value})}
+            required
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              label="Date" 
+              type="date"
+              value={newBookingData.date}
+              onChange={e => setNewBookingData({...newBookingData, date: e.target.value})}
+              required
+            />
+            <Input 
+              label="Time" 
+              type="time"
+              value={newBookingData.time}
+              onChange={e => setNewBookingData({...newBookingData, time: e.target.value})}
+              required
+            />
+          </div>
+          <div className="pt-4 flex space-x-3">
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsNewBookingOpen(false); setBookingError(''); }}>Cancel</Button>
+            <Button type="submit" className="flex-1 bg-yaron-gradient text-white border-none">Book Slot</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

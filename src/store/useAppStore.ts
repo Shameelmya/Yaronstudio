@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Studio } from '../types';
+import { Studio, Staff } from '../types';
 
 interface AppState {
   theme: 'light' | 'dark';
@@ -11,7 +11,12 @@ interface AppState {
   activeStudioId: string | null;
   addStudio: (studio: Studio) => void;
   updateStudio: (id: string, updates: Partial<Studio>) => void;
+  deleteStudio: (id: string) => void;
   setActiveStudio: (id: string) => void;
+
+  staff: Staff[];
+  addStaff: (staffMember: Staff) => void;
+  deleteStaff: (id: string) => void;
 
   customServices: string[];
   addCustomService: (service: string) => void;
@@ -33,7 +38,17 @@ export const useAppStore = create<AppState>()(
       updateStudio: (id, updates) => set((state) => ({
         studios: state.studios.map(s => s.id === id ? { ...s, ...updates } : s)
       })),
+      deleteStudio: (id) => set((state) => ({
+        studios: state.studios.filter(s => s.id !== id),
+        activeStudioId: state.activeStudioId === id ? (state.studios.find(s => s.id !== id)?.id || null) : state.activeStudioId
+      })),
       setActiveStudio: (id) => set({ activeStudioId: id }),
+
+      staff: [
+        { id: '1', name: 'Ameen', phone: '', position: 'Audio Engineer', joiningDate: Date.now(), salary: 0, status: 'active' }
+      ],
+      addStaff: (staffMember) => set((state) => ({ staff: [...state.staff, staffMember] })),
+      deleteStaff: (id) => set((state) => ({ staff: state.staff.filter(s => s.id !== id) })),
 
       customServices: [],
       addCustomService: (service) => set((state) => {

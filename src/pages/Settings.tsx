@@ -2,16 +2,26 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Users, Settings as SettingsIcon, LogOut, Moon, Sun, Plus, Building2, Pencil } from 'lucide-react';
+import { Users, Settings as SettingsIcon, LogOut, Moon, Sun, Plus, Building2, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
-  const { theme, toggleTheme, studios, addStudio } = useAppStore();
+  const { theme, toggleTheme, studios, addStudio, deleteStudio, staff, deleteStaff } = useAppStore();
+  const { user, signOut } = useAuthStore();
+  const navigate = useNavigate();
+  
   const [isAddStudioOpen, setIsAddStudioOpen] = useState(false);
   const [newStudioName, setNewStudioName] = useState('');
   const [newStudioAdmin, setNewStudioAdmin] = useState('');
+
+  // Delete Confirmation State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, name: string, type: 'studio' | 'staff' } | null>(null);
+  const [deleteInput, setDeleteInput] = useState('');
 
   const handleAddStudio = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +35,23 @@ export default function Settings() {
     setNewStudioName('');
     setNewStudioAdmin('');
     setIsAddStudioOpen(false);
+  };
+
+  const confirmDelete = () => {
+    if (!itemToDelete) return;
+    if (itemToDelete.type === 'studio') {
+      deleteStudio(itemToDelete.id);
+    } else if (itemToDelete.type === 'staff') {
+      deleteStaff(itemToDelete.id);
+    }
+    setDeleteModalOpen(false);
+    setItemToDelete(null);
+    setDeleteInput('');
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
   };
 
   return (
@@ -51,9 +78,14 @@ export default function Settings() {
                     <p className="font-semibold text-yaron-charcoal dark:text-white">{studio.name}</p>
                     <p className="text-xs text-gray-500">Admin: {studio.adminName}</p>
                   </div>
-                  <Button variant="ghost" size="icon" className="text-gray-400">
-                    <Pencil size={16} />
-                  </Button>
+                  <div className="flex space-x-1">
+                    <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-magenta">
+                      <Pencil size={16} />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => { setItemToDelete({ id: studio.id, name: studio.name, type: 'studio' }); setDeleteModalOpen(true); }}>
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -71,13 +103,20 @@ export default function Settings() {
             </div>
             
             <div className="space-y-3 flex-1">
-              <div className="flex justify-between items-center p-3 rounded-lg border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                <div>
-                  <p className="font-semibold text-yaron-charcoal dark:text-white">Ameen</p>
-                  <p className="text-xs text-gray-500">Audio Engineer</p>
+              {staff.map(member => (
+                <div key={member.id} className="flex justify-between items-center p-3 rounded-lg border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <div>
+                    <p className="font-semibold text-yaron-charcoal dark:text-white">{member.name}</p>
+                    <p className="text-xs text-gray-500">{member.position}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm" className="dark:border-gray-700">Manage</Button>
+                    <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => { setItemToDelete({ id: member.id, name: member.name, type: 'staff' }); setDeleteModalOpen(true); }}>
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm" className="dark:border-gray-700">Manage</Button>
-              </div>
+              ))}
             </div>
             <Button className="w-full mt-4" variant="secondary">
               <Users size={18} className="mr-2" /> Add Staff Member
@@ -122,8 +161,8 @@ export default function Settings() {
               </div>
               <h2 className="text-lg font-bold text-red-900 dark:text-red-400">Account</h2>
             </div>
-            <p className="text-sm text-red-700 dark:text-red-500 mb-4">Currently logged in as admin@yaronstudio.com</p>
-            <Button variant="danger" className="w-full">Sign Out</Button>
+            <p className="text-sm text-red-700 dark:text-red-500 mb-4">Currently logged in as {user?.email || 'admin@yaronstudio.com'}</p>
+            <Button onClick={handleSignOut} variant="danger" className="w-full">Sign Out</Button>
           </Card>
         </div>
       </div>
@@ -148,6 +187,38 @@ export default function Settings() {
             <Button type="submit" className="flex-1" disabled={!newStudioName || !newStudioAdmin}>Add Studio</Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal isOpen={deleteModalOpen} onClose={() => { setDeleteModalOpen(false); setDeleteInput(''); }} title="Confirm Deletion">
+        {itemToDelete && (
+          <div className="space-y-4">
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-lg flex items-start space-x-3 text-sm">
+              <AlertTriangle className="shrink-0 mt-0.5 text-red-500" size={18} />
+              <p>Are you sure you want to delete <strong>{itemToDelete.name}</strong>? This action cannot be undone.</p>
+            </div>
+            
+            <p className="text-sm text-gray-600 dark:text-gray-400">Type <span className="font-bold text-red-600">DELETE</span> to confirm.</p>
+            
+            <Input 
+              placeholder="DELETE" 
+              value={deleteInput}
+              onChange={e => setDeleteInput(e.target.value)}
+              autoFocus
+            />
+
+            <div className="pt-4 flex space-x-3">
+              <Button variant="outline" className="flex-1 dark:border-gray-700" onClick={() => { setDeleteModalOpen(false); setDeleteInput(''); }}>Cancel</Button>
+              <Button 
+                variant="danger" 
+                className="flex-1" 
+                disabled={deleteInput !== 'DELETE'}
+                onClick={confirmDelete}
+              >
+                Delete Permanently
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
