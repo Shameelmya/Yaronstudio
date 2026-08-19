@@ -138,7 +138,7 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
             <p className="text-gray-500 dark:text-gray-400 text-sm">Enter customer's phone number to start.</p>
             <Input
               label="Phone Number"
-              placeholder="e.g. 9876543210"
+              placeholder=""
               type="tel"
               {...register('phone', { required: 'Phone is required', minLength: 10 })}
               error={errors.phone?.message as string}
@@ -164,20 +164,20 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
             
             <Input
               label="Customer Name"
-              placeholder="Full Name"
+              placeholder=""
               {...register('name', { required: 'Name is required' })}
               error={errors.name?.message as string}
             />
             
             <Input
               label="Place / City"
-              placeholder="e.g. Kannur"
+              placeholder=""
               {...register('place', { required: 'Place is required' })}
             />
             
             <Input
               label="WhatsApp Number"
-              placeholder="Same as phone if empty"
+              placeholder=""
               {...register('whatsapp')}
             />
             
@@ -208,7 +208,7 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
             <div className="space-y-4 pt-2">
               <Input
                 label="Work Title"
-                placeholder="e.g. Ente Pattu, Album Song 03"
+                placeholder=""
                 {...register('workTitle', { required: 'Work Title is required' })}
                 error={errors.workTitle?.message as string}
                 icon={<Music size={18} className="text-gray-400" />}
@@ -239,7 +239,7 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
                     <input 
                       type="text"
                       className="flex-1 h-9 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 text-sm dark:text-white"
-                      placeholder="e.g. BGM Scoring"
+                      placeholder=""
                       value={newServiceName}
                       onChange={e => setNewServiceName(e.target.value)}
                     />
@@ -262,13 +262,13 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
                 <Input
                   label="Total Amount (₹)"
                   type="number"
-                  placeholder="0"
+                  placeholder=""
                   {...register('totalAmount', { required: true })}
                 />
                 <Input
                   label="Advance Paid (₹)"
                   type="number"
-                  placeholder="0"
+                  placeholder=""
                   {...register('paidAmount')}
                 />
               </div>

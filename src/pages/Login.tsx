@@ -11,6 +11,7 @@ import { Moon, Sun, Lock } from 'lucide-react';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -60,7 +61,7 @@ export default function Login() {
           <Input 
             label="Email Address" 
             type="email" 
-            placeholder="admin@yaronstudio.com"
+            placeholder=""
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -69,12 +70,25 @@ export default function Login() {
           <Input 
             label="Password" 
             type="password" 
-            placeholder="••••••••"
+            placeholder=""
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             className="h-12"
           />
+          
+          <div className="flex items-center space-x-2">
+            <input 
+              type="checkbox" 
+              id="keepSignedIn" 
+              checked={keepSignedIn}
+              onChange={(e) => setKeepSignedIn(e.target.checked)}
+              className="rounded text-yaron-magenta focus:ring-yaron-magenta bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 w-4 h-4"
+            />
+            <label htmlFor="keepSignedIn" className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+              Keep me signed in
+            </label>
+          </div>
           
           <Button 
             type="submit" 

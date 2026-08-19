@@ -219,7 +219,7 @@ export default function Bookings() {
           )}
           <Input 
             label="Customer Name" 
-            placeholder="e.g. Ameen"
+            placeholder=""
             value={newBookingData.customer}
             onChange={e => setNewBookingData({...newBookingData, customer: e.target.value})}
             required
@@ -227,7 +227,7 @@ export default function Bookings() {
           />
           <Input 
             label="Service / Title" 
-            placeholder="e.g. Vocal Recording"
+            placeholder=""
             value={newBookingData.title}
             onChange={e => setNewBookingData({...newBookingData, title: e.target.value})}
             required

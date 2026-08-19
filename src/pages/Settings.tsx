@@ -171,14 +171,14 @@ export default function Settings() {
         <form onSubmit={handleAddStudio} className="space-y-4">
           <Input 
             label="Studio Name" 
-            placeholder="e.g. Yaron Studio 2"
+            placeholder=""
             value={newStudioName}
             onChange={e => setNewStudioName(e.target.value)}
             autoFocus
           />
           <Input 
             label="Admin Name" 
-            placeholder="e.g. Shibili"
+            placeholder=""
             value={newStudioAdmin}
             onChange={e => setNewStudioAdmin(e.target.value)}
           />
