@@ -138,3 +138,22 @@ export const listenToStaff = (studioId: string, callback: (staff: any[]) => void
     callback(snap.docs.map(d => d.data()));
   });
 };
+
+export const createStudioApi = async (studio: any) => {
+  await setDoc(doc(db, 'studios', studio.id), studio);
+};
+
+export const updateStudioApi = async (studioId: string, updates: any) => {
+  await updateDoc(doc(db, 'studios', studioId), updates);
+};
+
+export const deleteStudioApi = async (studioId: string) => {
+  await deleteDoc(doc(db, 'studios', studioId));
+};
+
+export const listenToStudios = (callback: (studios: any[]) => void) => {
+  const q = query(collection(db, 'studios'));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map(d => d.data()));
+  });
+};

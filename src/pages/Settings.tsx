@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
-import { createStaffApi, updateStaffApi, deleteStaffApi } from '@/lib/api';
+import { createStaffApi, updateStaffApi, deleteStaffApi, createStudioApi, updateStudioApi, deleteStudioApi } from '@/lib/api';
 
 export default function Settings() {
   const { theme, toggleTheme, studios, addStudio, updateStudio, deleteStudio, staff, addStaff, updateStaff, deleteStaff } = useAppStore();
@@ -32,11 +32,11 @@ export default function Settings() {
   const [staffFormData, setStaffFormData] = useState({ id: '', name: '', position: '' });
   const [isEditingStaff, setIsEditingStaff] = useState(false);
 
-  const handleAddStudio = (e: React.FormEvent) => {
+  const handleAddStudio = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStudioName || !newStudioAdmin) return;
     
-    addStudio({
+    await createStudioApi({
       id: Date.now().toString(),
       name: newStudioName,
       adminName: newStudioAdmin,
@@ -46,11 +46,11 @@ export default function Settings() {
     setIsAddStudioOpen(false);
   };
 
-  const handleEditStudio = (e: React.FormEvent) => {
+  const handleEditStudio = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editStudioData.name || !editStudioData.adminName) return;
     
-    updateStudio(editStudioData.id, {
+    await updateStudioApi(editStudioData.id, {
       name: editStudioData.name,
       adminName: editStudioData.adminName
     });
@@ -99,7 +99,7 @@ export default function Settings() {
   const confirmDelete = async () => {
     if (!itemToDelete) return;
     if (itemToDelete.type === 'studio') {
-      deleteStudio(itemToDelete.id);
+      await deleteStudioApi(itemToDelete.id);
     } else if (itemToDelete.type === 'staff') {
       await deleteStaffApi(itemToDelete.id);
     }

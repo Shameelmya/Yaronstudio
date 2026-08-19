@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, FolderOpen, Calendar, IndianRupee, Settings, ChevronDown, Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
-import { listenToStaff } from '@/lib/api';
+import { listenToStaff, listenToStudios } from '@/lib/api';
 
 const getGreeting = (adminName: string) => {
   const hour = new Date().getHours();
@@ -169,7 +169,7 @@ export const Header = () => {
 };
 
 export default function MainLayout() {
-  const { theme, activeStudioId, setStaff } = useAppStore();
+  const { theme, activeStudioId, setStaff, setStudios } = useAppStore();
 
   React.useEffect(() => {
     if (theme === 'dark') {
@@ -180,11 +180,18 @@ export default function MainLayout() {
   }, [theme]);
 
   React.useEffect(() => {
+    const unsubStudios = listenToStudios((studiosData) => {
+      setStudios(studiosData);
+    });
+    return () => unsubStudios();
+  }, [setStudios]);
+
+  React.useEffect(() => {
     if (!activeStudioId) return;
-    const unsub = listenToStaff(activeStudioId, (staffData) => {
+    const unsubStaff = listenToStaff(activeStudioId, (staffData) => {
       setStaff(staffData);
     });
-    return () => unsub();
+    return () => unsubStaff();
   }, [activeStudioId, setStaff]);
 
   return (

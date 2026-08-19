@@ -8,6 +8,7 @@ interface AppState {
   toggleTheme: () => void;
   
   studios: Studio[];
+  setStudios: (studios: Studio[]) => void;
   activeStudioId: string | null;
   addStudio: (studio: Studio) => void;
   updateStudio: (id: string, updates: Partial<Studio>) => void;
@@ -31,10 +32,19 @@ export const useAppStore = create<AppState>()(
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
       
-      studios: [
-        { id: '1', name: 'Yaron Studio 1', adminName: 'Shibili' }
-      ],
-      activeStudioId: '1',
+      studios: [],
+      setStudios: (studios) => set((state) => {
+        // If there's no active studio and we loaded some, pick the first one
+        if (!state.activeStudioId && studios.length > 0) {
+          return { studios, activeStudioId: studios[0].id };
+        }
+        // If active studio was deleted, pick the first one
+        if (state.activeStudioId && !studios.find(s => s.id === state.activeStudioId) && studios.length > 0) {
+          return { studios, activeStudioId: studios[0].id };
+        }
+        return { studios };
+      }),
+      activeStudioId: null,
       
       addStudio: (studio) => set((state) => ({ studios: [...state.studios, studio] })),
       updateStudio: (id, updates) => set((state) => ({
