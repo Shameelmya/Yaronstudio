@@ -8,6 +8,8 @@ import { Modal } from '@/components/ui/Modal';
 import { useAppStore } from '@/store/useAppStore';
 import { listenToWorks, listenToBookings, updateBookingStatus } from '@/lib/api';
 import { format, isBefore, startOfDay } from 'date-fns';
+import { UserCheck } from 'lucide-react';
+import { QuickAttendanceModal } from '@/components/home/QuickAttendanceModal';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -21,6 +23,8 @@ export default function Home() {
   const [totalPendingPayments, setTotalPendingPayments] = useState(0);
   const [incomeThisMonth, setIncomeThisMonth] = useState(0);
   const [activeWorksCount, setActiveWorksCount] = useState(0);
+  
+  const [isQuickAttendanceOpen, setIsQuickAttendanceOpen] = useState(false);
   
   const { activeStudioId } = useAppStore();
   
@@ -80,13 +84,16 @@ export default function Home() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-yaron-charcoal dark:text-white">Overview</h1>
-            <Button onClick={() => navigate('/works?new=true')} size="icon" className="w-8 h-8 rounded-full shadow-md bg-yaron-gradient border-none hover:opacity-90">
-              <Plus size={16} className="text-white" />
-            </Button>
-          </div>
+          <h1 className="text-2xl font-bold text-yaron-charcoal dark:text-white">Overview</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Welcome to Yaron Studio</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <Button onClick={() => setIsQuickAttendanceOpen(true)} size="icon" variant="outline" className="w-10 h-10 rounded-full border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm text-yaron-charcoal dark:text-white">
+            <UserCheck size={18} />
+          </Button>
+          <Button onClick={() => navigate('/works?new=true')} size="icon" className="w-12 h-12 rounded-full shadow-md bg-yaron-gradient border-none hover:opacity-90">
+            <Plus size={24} className="text-white" />
+          </Button>
         </div>
       </div>
 
@@ -252,6 +259,8 @@ export default function Home() {
           </div>
         )}
       </Modal>
+
+      <QuickAttendanceModal isOpen={isQuickAttendanceOpen} onClose={() => setIsQuickAttendanceOpen(false)} />
     </div>
   );
 }

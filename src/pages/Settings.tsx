@@ -10,13 +10,16 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
-  const { theme, toggleTheme, studios, addStudio, deleteStudio, staff, addStaff, updateStaff, deleteStaff } = useAppStore();
+  const { theme, toggleTheme, studios, addStudio, updateStudio, deleteStudio, staff, addStaff, updateStaff, deleteStaff } = useAppStore();
   const { user, signOut } = useAuthStore();
   const navigate = useNavigate();
   
   const [isAddStudioOpen, setIsAddStudioOpen] = useState(false);
   const [newStudioName, setNewStudioName] = useState('');
   const [newStudioAdmin, setNewStudioAdmin] = useState('');
+
+  const [isEditStudioOpen, setIsEditStudioOpen] = useState(false);
+  const [editStudioData, setEditStudioData] = useState({ id: '', name: '', adminName: '' });
 
   // Delete Confirmation State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -27,9 +30,6 @@ export default function Settings() {
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [staffFormData, setStaffFormData] = useState({ id: '', name: '', position: '' });
   const [isEditingStaff, setIsEditingStaff] = useState(false);
-
-  // Notifications State
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const handleAddStudio = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +43,17 @@ export default function Settings() {
     setNewStudioName('');
     setNewStudioAdmin('');
     setIsAddStudioOpen(false);
+  };
+
+  const handleEditStudio = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editStudioData.name || !editStudioData.adminName) return;
+    
+    updateStudio(editStudioData.id, {
+      name: editStudioData.name,
+      adminName: editStudioData.adminName
+    });
+    setIsEditStudioOpen(false);
   };
 
   const handleSaveStaff = (e: React.FormEvent) => {
@@ -122,7 +133,7 @@ export default function Settings() {
                     <p className="text-xs text-gray-500">Admin: {studio.adminName}</p>
                   </div>
                   <div className="flex space-x-1">
-                    <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-magenta">
+                    <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-magenta" onClick={() => { setEditStudioData({ id: studio.id, name: studio.name, adminName: studio.adminName }); setIsEditStudioOpen(true); }}>
                       <Pencil size={16} />
                     </Button>
                     <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => { setItemToDelete({ id: studio.id, name: studio.name, type: 'studio' }); setDeleteModalOpen(true); }}>
@@ -193,18 +204,6 @@ export default function Settings() {
                   <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-transform", theme === 'dark' ? "left-7" : "left-1")}></div>
                 </button>
               </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  {notificationsEnabled ? <Bell size={16} className="text-gray-500" /> : <BellOff size={16} className="text-gray-400" />}
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">Notifications</span>
-                </div>
-                <button 
-                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                  className={cn("w-12 h-6 rounded-full relative transition-colors focus:outline-none", notificationsEnabled ? "bg-yaron-magenta" : "bg-gray-200")}
-                >
-                  <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-transform", notificationsEnabled ? "left-7" : "left-1")}></div>
-                </button>
-              </div>
             </div>
           </Card>
 
@@ -250,20 +249,46 @@ export default function Settings() {
         <form onSubmit={handleAddStudio} className="space-y-4">
           <Input 
             label="Studio Name" 
-            placeholder=""
+            placeholder="e.g., Yaron Studio 2"
             value={newStudioName}
             onChange={e => setNewStudioName(e.target.value)}
+            required
             autoFocus
           />
           <Input 
             label="Admin Name" 
-            placeholder=""
+            placeholder="e.g., John Doe"
             value={newStudioAdmin}
             onChange={e => setNewStudioAdmin(e.target.value)}
+            required
           />
           <div className="pt-4 flex space-x-3">
             <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsAddStudioOpen(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1 bg-yaron-gradient text-white border-none" disabled={!newStudioName || !newStudioAdmin}>Add Studio</Button>
+            <Button type="submit" className="flex-1 bg-yaron-gradient text-white border-none">Add Studio</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={isEditStudioOpen} onClose={() => setIsEditStudioOpen(false)} title="Edit Studio">
+        <form onSubmit={handleEditStudio} className="space-y-4">
+          <Input 
+            label="Studio Name" 
+            placeholder="e.g., Yaron Studio 1"
+            value={editStudioData.name}
+            onChange={e => setEditStudioData({...editStudioData, name: e.target.value})}
+            required
+            autoFocus
+          />
+          <Input 
+            label="Admin Name" 
+            placeholder="e.g., Shibili"
+            value={editStudioData.adminName}
+            onChange={e => setEditStudioData({...editStudioData, adminName: e.target.value})}
+            required
+          />
+          <div className="pt-4 flex space-x-3">
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsEditStudioOpen(false)}>Cancel</Button>
+            <Button type="submit" className="flex-1 bg-yaron-gradient text-white border-none">Save Changes</Button>
           </div>
         </form>
       </Modal>

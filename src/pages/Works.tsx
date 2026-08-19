@@ -4,7 +4,7 @@ import { updateWork, listenToWorks, deleteWork } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Plus, Search, Phone, Edit2, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Phone, Edit2, Trash2, AlertTriangle, Filter } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { NewWorkModal } from '@/components/works/NewWorkModal';
 import { Modal } from '@/components/ui/Modal';
@@ -17,6 +17,7 @@ export default function Works() {
   const [isNewWorkModalOpen, setIsNewWorkModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWork, setSelectedWork] = useState<any>(null);
   const [works, setWorks] = useState<any[]>([]);
@@ -151,46 +152,60 @@ export default function Works() {
 
       <Card className="flex-1 flex flex-col min-h-[500px] dark:bg-gray-900 dark:border-gray-800">
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex-1">
-            <Input 
-              placeholder="Search by work title, customer name..." 
-              icon={<Search size={20} className="text-gray-400" />}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-12 text-base"
-            />
-          </div>
-          <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl shrink-0 h-12 w-full sm:w-auto">
-            {['all', 'today', 'week', 'month'].map((v) => (
-              <button
-                key={v}
-                onClick={() => setTimeFilter(v as any)}
-                className={cn(
-                  "flex-1 sm:flex-none sm:px-6 py-1 rounded-lg text-sm font-medium transition-all capitalize whitespace-nowrap flex items-center justify-center",
-                  timeFilter === v ? "bg-white dark:bg-gray-700 text-yaron-charcoal dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-yaron-charcoal dark:hover:text-white"
-                )}
-              >
-                {v === 'all' ? 'All Time' : v}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex overflow-x-auto hide-scrollbar bg-gray-50 dark:bg-gray-800 p-1 rounded-xl w-full sm:w-fit mb-4">
-          {filters.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setActiveFilter(f.id)}
-              className={cn(
-                "flex-1 sm:px-6 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                activeFilter === f.id 
-                  ? "bg-white dark:bg-gray-700 text-yaron-charcoal dark:text-white shadow-sm" 
-                  : "text-gray-500 dark:text-gray-400 hover:text-yaron-charcoal dark:hover:text-white"
+          <div className="flex-1 relative flex items-center gap-3">
+            <div className="flex-1">
+              <Input 
+                placeholder="Search by work title, customer name..." 
+                icon={<Search size={20} className="text-gray-400" />}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-12 text-base"
+              />
+            </div>
+            <div className="relative">
+              <Button variant="outline" className="h-12 px-4 border-gray-200 dark:border-gray-700" onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}>
+                <Filter size={20} className="text-yaron-charcoal dark:text-gray-300" />
+              </Button>
+              {isFilterMenuOpen && (
+                <div className="absolute right-0 top-14 w-64 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl rounded-xl p-4 z-10 flex flex-col gap-4">
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Time</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['all', 'today', 'week', 'month'].map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => setTimeFilter(v as any)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-medium capitalize",
+                            timeFilter === v ? "bg-yaron-magenta text-white" : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          )}
+                        >
+                          {v === 'all' ? 'All Time' : v}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Status</p>
+                    <div className="flex flex-wrap gap-2">
+                      {filters.map((f) => (
+                        <button
+                          key={f.id}
+                          onClick={() => setActiveFilter(f.id)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap",
+                            activeFilter === f.id ? "bg-yaron-charcoal dark:bg-gray-700 text-white" : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          )}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               )}
-            >
-              {f.label}
-            </button>
-          ))}
+            </div>
+          </div>
         </div>
 
         <div className="flex-1 overflow-auto -mx-5 px-5">
