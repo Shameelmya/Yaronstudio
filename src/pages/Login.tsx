@@ -45,7 +45,7 @@ export default function Login() {
 
       <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-8 animate-in fade-in zoom-in-95 duration-500">
         <div className="flex flex-col items-center mb-8">
-          <img src="/yaron logo.png" alt="Yaron Studio" className="h-16 w-16 object-contain mb-4" />
+          <img src="/yaron logo.png" alt="Yaron Studio" className="h-24 w-24 object-contain mb-4" />
           <h1 className="text-2xl font-bold text-yaron-charcoal dark:text-white">Welcome Back</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Sign in to Yaron Studio Dashboard</p>
         </div>

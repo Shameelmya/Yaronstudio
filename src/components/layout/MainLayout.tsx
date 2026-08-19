@@ -71,9 +71,9 @@ export const Sidebar = () => {
 
   return (
     <aside className="hidden sm:flex flex-col w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 fixed left-0 top-0 transition-colors">
-      <div className="h-20 flex items-center px-6 border-b border-gray-100 dark:border-gray-800">
-        <img src="/yaron logo.png" alt="Yaron Studio" className="h-10 w-10 object-contain mr-3" />
-        <h1 className="font-bold text-xl text-yaron-charcoal dark:text-white tracking-tight">Yaron <span className="text-yaron-magenta">Studio</span></h1>
+      <div className="h-24 flex items-center px-6 border-b border-gray-100 dark:border-gray-800">
+        <img src="/yaron logo.png" alt="Yaron Studio" className="h-16 w-16 object-contain mr-3" />
+        <h1 className="font-bold text-2xl text-yaron-charcoal dark:text-white tracking-tight">Yaron <span className="text-yaron-magenta">Studio</span></h1>
       </div>
       
       <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
@@ -129,7 +129,7 @@ export const Header = () => {
   return (
     <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center px-4 justify-between sticky top-0 z-40 sm:hidden transition-colors">
       <div className="flex items-center space-x-2">
-        <img src="/yaron logo.png" alt="Yaron Studio" className="h-8 w-8 object-contain" />
+        <img src="/yaron logo.png" alt="Yaron Studio" className="h-12 w-12 object-contain" />
         <div className="flex flex-col">
           <select 
             value={activeStudioId || ''} 
