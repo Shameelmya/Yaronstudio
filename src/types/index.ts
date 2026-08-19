@@ -1,3 +1,9 @@
+export interface Studio {
+  id: string;
+  name: string;
+  adminName: string;
+}
+
 export type UserRole = 'admin' | 'staff';
 
 export interface Customer {
@@ -19,9 +25,9 @@ export interface Work {
   title: string;
   totalAmount: number;
   paidAmount: number;
-  pendingAmount: number;
-  status: WorkStatus;
-  createdAt: number;
+  status: 'pending' | 'in_progress' | 'completed' | 'delivered' | 'cancelled';
+  dueDate?: Date;
+  createdAt: Date;
 }
 
 export interface Service {
@@ -49,7 +55,7 @@ export interface Booking {
   staffId?: string;
   date: number; // Start time timestamp
   duration: number; // In minutes
-  status: 'scheduled' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'completed' | 'cancelled' | 'missed';
 }
 
 export interface Staff {
