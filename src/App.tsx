@@ -10,11 +10,20 @@ import StaffPortal from '@/pages/StaffPortal';
 import DeliveryPortal from '@/pages/DeliveryPortal';
 import Login from '@/pages/Login';
 import { useAuthStore } from '@/store/useAuthStore';
+import { Music } from 'lucide-react';
 
 // Auth Guard Component
 const RequireAuth = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuthStore();
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">Loading...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="relative">
+        <div className="absolute inset-0 bg-yaron-magenta blur-xl opacity-20 rounded-full animate-pulse"></div>
+        <Music size={48} className="text-yaron-magenta animate-bounce relative z-10" />
+      </div>
+      <p className="mt-4 text-yaron-magenta font-semibold tracking-widest uppercase text-sm">Yaron Studio</p>
+    </div>
+  );
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
