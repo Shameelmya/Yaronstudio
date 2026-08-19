@@ -87,11 +87,11 @@ export default function Home() {
           <h1 className="text-2xl font-bold text-yaron-charcoal dark:text-white">Overview</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Welcome to Yaron Studio</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <Button onClick={() => setIsQuickAttendanceOpen(true)} size="icon" variant="outline" className="w-10 h-10 rounded-full border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm text-yaron-charcoal dark:text-white">
-            <UserCheck size={18} />
+        <div className="flex items-center space-x-6">
+          <Button onClick={() => setIsQuickAttendanceOpen(true)} size="icon" className="w-12 h-12 rounded-full bg-blue-500 hover:bg-blue-600 text-white border-none transition-colors">
+            <UserCheck size={24} />
           </Button>
-          <Button onClick={() => navigate('/works?new=true')} size="icon" className="w-12 h-12 rounded-full shadow-md bg-yaron-gradient border-none hover:opacity-90">
+          <Button onClick={() => navigate('/works?new=true')} size="icon" className="w-12 h-12 rounded-full shadow-md bg-yaron-gradient border-none hover:opacity-90 transition-opacity">
             <Plus size={24} className="text-white" />
           </Button>
         </div>

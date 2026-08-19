@@ -4,8 +4,9 @@ import { updateWork, listenToWorks, deleteWork } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Plus, Search, Phone, Edit2, Trash2, AlertTriangle, Filter } from 'lucide-react';
+import { Plus, Search, Phone, Edit2, Trash2, AlertTriangle, Filter, Download } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
+import { generateInvoice } from '@/lib/invoice';
 import { NewWorkModal } from '@/components/works/NewWorkModal';
 import { Modal } from '@/components/ui/Modal';
 import { Work } from '@/types';
@@ -252,6 +253,9 @@ export default function Works() {
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex justify-end space-x-2">
+                      <Button variant="ghost" size="icon" className="text-gray-400 hover:text-green-500 dark:hover:text-green-400" title="Download Invoice" onClick={() => generateInvoice(work)}>
+                        <Download size={16} />
+                      </Button>
                       <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-magenta dark:hover:text-yaron-magenta" title="Edit Work" onClick={() => { setSelectedWork(work); setIsNewWorkModalOpen(true); }}>
                         <Edit2 size={16} />
                       </Button>

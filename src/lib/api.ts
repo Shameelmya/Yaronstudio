@@ -72,9 +72,11 @@ export const addExpense = async (expense: Expense) => {
 };
 
 export const listenToExpenses = (studioId: string, callback: (expenses: Expense[]) => void) => {
-  const q = query(collection(db, 'expenses'), orderBy('date', 'desc'));
+  const q = query(collection(db, 'expenses'));
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => d.data() as Expense));
+    const data = snap.docs.map(d => d.data() as Expense);
+    data.sort((a, b) => b.date - a.date);
+    callback(data);
   });
 };
 
@@ -86,10 +88,11 @@ export const createAttendance = async (attendance: any) => {
 };
 
 export const listenToAttendance = (studioId: string, callback: (attendance: any[]) => void) => {
-  // Can filter by studioId if added to attendance, but for now we'll fetch all and filter client side if needed
-  const q = query(collection(db, 'attendance'), orderBy('date', 'desc'));
+  const q = query(collection(db, 'attendance'));
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => d.data()));
+    const data = snap.docs.map(d => d.data());
+    data.sort((a, b) => b.date - a.date);
+    callback(data);
   });
 };
 
@@ -109,8 +112,10 @@ export const paySalary = async (payment: any) => {
 };
 
 export const listenToSalaryPayments = (studioId: string, callback: (payments: any[]) => void) => {
-  const q = query(collection(db, 'salaryPayments'), orderBy('datePaid', 'desc'));
+  const q = query(collection(db, 'salaryPayments'));
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => d.data()));
+    const data = snap.docs.map(d => d.data());
+    data.sort((a, b) => b.datePaid - a.datePaid);
+    callback(data);
   });
 };
