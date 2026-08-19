@@ -6,6 +6,7 @@ import Works from '@/pages/Works';
 import Bookings from '@/pages/Bookings';
 import Finance from '@/pages/Finance';
 import Settings from '@/pages/Settings';
+import StaffPortal from '@/pages/StaffPortal';
 import DeliveryPortal from '@/pages/DeliveryPortal';
 import Login from '@/pages/Login';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -31,6 +32,7 @@ function App() {
           <Route path="bookings" element={<Bookings />} />
           <Route path="finance" element={<Finance />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="staff" element={<StaffPortal />} />
         </Route>
         
         {/* Public Delivery Portal */}

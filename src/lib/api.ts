@@ -77,3 +77,40 @@ export const listenToExpenses = (studioId: string, callback: (expenses: Expense[
     callback(snap.docs.map(d => d.data() as Expense));
   });
 };
+
+// ==============================
+// Staff & Attendance API
+// ==============================
+export const createAttendance = async (attendance: any) => {
+  await setDoc(doc(db, 'attendance', attendance.id), attendance);
+};
+
+export const listenToAttendance = (studioId: string, callback: (attendance: any[]) => void) => {
+  // Can filter by studioId if added to attendance, but for now we'll fetch all and filter client side if needed
+  const q = query(collection(db, 'attendance'), orderBy('date', 'desc'));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map(d => d.data()));
+  });
+};
+
+export const paySalary = async (payment: any) => {
+  // Track the payment status
+  await setDoc(doc(db, 'salaryPayments', payment.id), payment);
+  // Create an expense
+  const expenseId = `exp_${payment.id}`;
+  await setDoc(doc(db, 'expenses', expenseId), {
+    id: expenseId,
+    studioId: payment.studioId,
+    title: `Salary: ${payment.month}`,
+    category: 'salary',
+    amount: payment.amount,
+    date: payment.datePaid,
+  });
+};
+
+export const listenToSalaryPayments = (studioId: string, callback: (payments: any[]) => void) => {
+  const q = query(collection(db, 'salaryPayments'), orderBy('datePaid', 'desc'));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map(d => d.data()));
+  });
+};

@@ -80,6 +80,15 @@ export interface Attendance {
   status: 'present' | 'absent' | 'leave' | 'half_day';
 }
 
+export interface SalaryPayment {
+  id: string;
+  studioId: string;
+  staffId: string;
+  month: string; // e.g., '2023-10'
+  amount: number;
+  datePaid: number;
+}
+
 export interface Expense {
   id: string;
   studioId: string;

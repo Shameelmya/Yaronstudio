@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Users, Settings as SettingsIcon, LogOut, Moon, Sun, Plus, Building2, Pencil, Trash2, AlertTriangle, Bell, BellOff } from 'lucide-react';
+import { Users, Settings as SettingsIcon, LogOut, Moon, Sun, Plus, Building2, Pencil, Trash2, AlertTriangle, Bell, BellOff, ArrowRight } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
@@ -161,9 +161,14 @@ export default function Settings() {
                 </div>
               ))}
             </div>
-            <Button className="w-full mt-4" variant="secondary" onClick={openAddStaff}>
-              <Users size={18} className="mr-2" /> Add Staff Member
-            </Button>
+            <div className="mt-4 space-y-2">
+              <Button className="w-full bg-yaron-gradient border-none text-white shadow-md" onClick={() => navigate('/staff')}>
+                Open Staff Portal <ArrowRight size={18} className="ml-2" />
+              </Button>
+              <Button className="w-full" variant="secondary" onClick={openAddStaff}>
+                <Users size={18} className="mr-2" /> Add Staff Member
+              </Button>
+            </div>
           </Card>
         </div>
 
