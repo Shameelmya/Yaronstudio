@@ -15,6 +15,7 @@ interface AppState {
   setActiveStudio: (id: string) => void;
 
   staff: Staff[];
+  setStaff: (staff: Staff[]) => void;
   addStaff: (staffMember: Staff) => void;
   updateStaff: (id: string, updates: Partial<Staff>) => void;
   deleteStaff: (id: string) => void;
@@ -45,9 +46,8 @@ export const useAppStore = create<AppState>()(
       })),
       setActiveStudio: (id) => set({ activeStudioId: id }),
 
-      staff: [
-        { id: '1', name: 'Ameen', phone: '', position: 'Audio Engineer', joiningDate: Date.now(), salary: 0, status: 'active' }
-      ],
+      staff: [],
+      setStaff: (staff) => set({ staff }),
       addStaff: (staffMember) => set((state) => ({ staff: [...state.staff, staffMember] })),
       updateStaff: (id, updates) => set((state) => ({
         staff: state.staff.map(s => s.id === id ? { ...s, ...updates } : s)

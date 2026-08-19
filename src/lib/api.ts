@@ -119,3 +119,22 @@ export const listenToSalaryPayments = (studioId: string, callback: (payments: an
     callback(data);
   });
 };
+
+export const createStaffApi = async (staff: any) => {
+  await setDoc(doc(db, 'staff', staff.id), staff);
+};
+
+export const updateStaffApi = async (staffId: string, updates: any) => {
+  await updateDoc(doc(db, 'staff', staffId), updates);
+};
+
+export const deleteStaffApi = async (staffId: string) => {
+  await deleteDoc(doc(db, 'staff', staffId));
+};
+
+export const listenToStaff = (studioId: string, callback: (staff: any[]) => void) => {
+  const q = query(collection(db, 'staff'), where('studioId', '==', studioId));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map(d => d.data()));
+  });
+};

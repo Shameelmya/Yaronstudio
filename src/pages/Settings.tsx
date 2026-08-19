@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
+import { createStaffApi, updateStaffApi, deleteStaffApi } from '@/lib/api';
 
 export default function Settings() {
   const { theme, toggleTheme, studios, addStudio, updateStudio, deleteStudio, staff, addStaff, updateStaff, deleteStaff } = useAppStore();
@@ -56,15 +57,19 @@ export default function Settings() {
     setIsEditStudioOpen(false);
   };
 
-  const handleSaveStaff = (e: React.FormEvent) => {
+  const handleSaveStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!staffFormData.name || !staffFormData.position) return;
 
+    const activeStudioId = studios.find(s => s.id === useAppStore.getState().activeStudioId)?.id;
+    if (!activeStudioId) return;
+
     if (isEditingStaff) {
-      updateStaff(staffFormData.id, { name: staffFormData.name, position: staffFormData.position });
+      await updateStaffApi(staffFormData.id, { name: staffFormData.name, position: staffFormData.position });
     } else {
-      addStaff({
+      await createStaffApi({
         id: Date.now().toString(),
+        studioId: activeStudioId,
         name: staffFormData.name,
         position: staffFormData.position,
         phone: '',
@@ -91,12 +96,12 @@ export default function Settings() {
     setIsStaffModalOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!itemToDelete) return;
     if (itemToDelete.type === 'studio') {
       deleteStudio(itemToDelete.id);
     } else if (itemToDelete.type === 'staff') {
-      deleteStaff(itemToDelete.id);
+      await deleteStaffApi(itemToDelete.id);
     }
     setDeleteModalOpen(false);
     setItemToDelete(null);

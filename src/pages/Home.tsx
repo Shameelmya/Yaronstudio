@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency } from '@/lib/utils';
 import { Plus, IndianRupee, Clock, TrendingUp, AlertCircle, Music, CheckCircle2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { useAppStore } from '@/store/useAppStore';
 import { listenToWorks, listenToBookings, updateBookingStatus } from '@/lib/api';
@@ -24,7 +24,8 @@ export default function Home() {
   const [incomeThisMonth, setIncomeThisMonth] = useState(0);
   const [activeWorksCount, setActiveWorksCount] = useState(0);
   
-  const [isQuickAttendanceOpen, setIsQuickAttendanceOpen] = useState(false);
+  const location = useLocation();
+  const isQuickAttendanceOpen = location.hash === '#attendance';
   
   const { activeStudioId } = useAppStore();
   
@@ -88,10 +89,10 @@ export default function Home() {
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Welcome to Yaron Studio</p>
         </div>
         <div className="flex items-center space-x-6">
-          <Button onClick={() => setIsQuickAttendanceOpen(true)} size="icon" className="w-12 h-12 rounded-full bg-blue-500 hover:bg-blue-600 text-white border-none transition-colors">
+          <Button onClick={() => navigate('#attendance')} size="icon" className="w-12 h-12 rounded-full bg-blue-500 hover:bg-blue-600 text-white border-none transition-colors">
             <UserCheck size={24} />
           </Button>
-          <Button onClick={() => navigate('/works?new=true')} size="icon" className="w-12 h-12 rounded-full shadow-md bg-yaron-gradient border-none hover:opacity-90 transition-opacity">
+          <Button onClick={() => navigate('/works#new-work')} size="icon" className="w-12 h-12 rounded-full shadow-md bg-yaron-gradient border-none hover:opacity-90 transition-opacity">
             <Plus size={24} className="text-white" />
           </Button>
         </div>
@@ -260,7 +261,10 @@ export default function Home() {
         )}
       </Modal>
 
-      <QuickAttendanceModal isOpen={isQuickAttendanceOpen} onClose={() => setIsQuickAttendanceOpen(false)} />
+      <QuickAttendanceModal 
+        isOpen={location.hash === '#attendance'} 
+        onClose={() => navigate(-1)} 
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { updateWork, listenToWorks, deleteWork } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -14,8 +14,9 @@ import { useAppStore } from '@/store/useAppStore';
 import { format, isSameDay, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 
 export default function Works() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [isNewWorkModalOpen, setIsNewWorkModalOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isNewWorkModalOpen = location.hash === '#new-work';
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
@@ -29,13 +30,6 @@ export default function Works() {
   const [deleteInput, setDeleteInput] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    if (searchParams.get('new') === 'true') {
-      setIsNewWorkModalOpen(true);
-      searchParams.delete('new');
-      setSearchParams(searchParams);
-    }
-  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!activeStudioId) return;
@@ -145,7 +139,7 @@ export default function Works() {
           <h1 className="text-2xl font-bold text-yaron-charcoal dark:text-white">Works & Customers</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">Manage projects and client relationships</p>
         </div>
-        <Button onClick={() => setIsNewWorkModalOpen(true)} className="w-full sm:w-auto shadow-md h-12 text-base bg-yaron-gradient border-none">
+        <Button onClick={() => navigate('#new-work')} className="w-full sm:w-auto shadow-md h-12 text-base bg-yaron-gradient border-none">
           <Plus size={20} className="mr-2" />
           New Work
         </Button>
@@ -256,7 +250,7 @@ export default function Works() {
                       <Button variant="ghost" size="icon" className="text-gray-400 hover:text-green-500 dark:hover:text-green-400" title="Download Invoice" onClick={() => generateInvoice(work)}>
                         <Download size={16} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-magenta dark:hover:text-yaron-magenta" title="Edit Work" onClick={() => { setSelectedWork(work); setIsNewWorkModalOpen(true); }}>
+                      <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-magenta dark:hover:text-yaron-magenta" title="Edit Work" onClick={() => { setSelectedWork(work); navigate('#new-work'); }}>
                         <Edit2 size={16} />
                       </Button>
                       <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500 dark:hover:text-red-400" title="Delete Work" onClick={() => { setWorkToDelete({ id: work.id, title: work.title }); setDeleteModalOpen(true); }}>
@@ -280,7 +274,10 @@ export default function Works() {
 
       <NewWorkModal 
         isOpen={isNewWorkModalOpen} 
-        onClose={() => { setIsNewWorkModalOpen(false); setSelectedWork(null); }}
+        onClose={() => {
+          setSelectedWork(null);
+          navigate(-1);
+        }}
         initialData={selectedWork}
       />
 

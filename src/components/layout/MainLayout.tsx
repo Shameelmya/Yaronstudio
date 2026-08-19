@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, FolderOpen, Calendar, IndianRupee, Settings, ChevronDown, Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
+import { listenToStaff } from '@/lib/api';
 
 const getGreeting = (adminName: string) => {
   const hour = new Date().getHours();
@@ -30,10 +31,21 @@ export const BottomNav = () => {
                          (item.path !== '/' && location.pathname.startsWith(item.path));
         const Icon = item.icon;
         
+        const handleNav = (targetPath: string) => {
+          if (location.pathname === targetPath) return;
+          if (targetPath === '/') {
+            navigate(-1); // Go back if clicking home
+          } else if (location.pathname === '/') {
+            navigate(targetPath); // Push if going from home
+          } else {
+            navigate(targetPath, { replace: true }); // Replace if switching between tabs
+          }
+        };
+        
         return (
           <button
             key={item.path}
-            onClick={() => navigate(item.path)}
+            onClick={() => handleNav(item.path)}
             className="flex flex-col items-center justify-center w-[58px] gap-1 transition-all"
           >
             <div className={cn(
@@ -105,7 +117,12 @@ export const Sidebar = () => {
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                if (location.pathname === item.path) return;
+                if (item.path === '/') navigate(-1);
+                else if (location.pathname === '/') navigate(item.path);
+                else navigate(item.path, { replace: true });
+              }}
               className={cn(
                 "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all",
                 isActive 
@@ -152,7 +169,7 @@ export const Header = () => {
 };
 
 export default function MainLayout() {
-  const { theme } = useAppStore();
+  const { theme, activeStudioId, setStaff } = useAppStore();
 
   React.useEffect(() => {
     if (theme === 'dark') {
@@ -161,6 +178,14 @@ export default function MainLayout() {
       document.documentElement.classList.remove('dark');
     }
   }, [theme]);
+
+  React.useEffect(() => {
+    if (!activeStudioId) return;
+    const unsub = listenToStaff(activeStudioId, (staffData) => {
+      setStaff(staffData);
+    });
+    return () => unsub();
+  }, [activeStudioId, setStaff]);
 
   return (
     <div className={cn("min-h-screen flex transition-colors", "bg-yaron-light dark:bg-gray-950 dark:text-white")}>
