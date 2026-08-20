@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { IndianRupee, TrendingUp, TrendingDown, FileText, Download, Plus, Filter, Music, Video, Headphones, Mic } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { listenToWorks, listenToExpenses } from '@/lib/api';
+import { listenToWorks, listenToExpenses, listenToIncomes } from '@/lib/api';
 import { useAppStore } from '@/store/useAppStore';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { NewExpenseModal } from '@/components/finance/NewExpenseModal';
@@ -32,7 +32,7 @@ export default function Finance() {
       setExpenses(fetchedExpenses);
     });
     
-    const unsubIncomes = listenToIncomes(activeStudioId, (fetchedIncomes) => {
+    const unsubIncomes = listenToIncomes(activeStudioId, (fetchedIncomes: any[]) => {
       setIncomes(fetchedIncomes);
     });
 
@@ -312,9 +312,6 @@ export default function Finance() {
               )}
             </div>
           </Card>
-        </div>
-      )}
-
         </div>
       )}
 

@@ -106,15 +106,7 @@ export interface SalaryPayment {
   datePaid: number;
 }
 
-export interface Expense {
-  id: string;
-  studioId: string;
-  title: string;
-  category: 'salary' | 'rent' | 'electricity' | 'internet' | 'equipment' | 'maintenance' | 'software' | 'marketing' | 'transport' | 'miscellaneous';
-  amount: number;
-  date: number;
-  note?: string;
-}
+
 
 export interface Delivery {
   id: string;
