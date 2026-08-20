@@ -15,6 +15,7 @@ export function NewIncomeModal({ isOpen, onClose }: NewIncomeModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     amount: '',
+    description: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -28,10 +29,11 @@ export function NewIncomeModal({ isOpen, onClose }: NewIncomeModalProps) {
         id: Date.now().toString(),
         studioId: activeStudioId,
         title: formData.title,
+        description: formData.description || undefined,
         amount: Number(formData.amount),
         date: Date.now(),
       });
-      setFormData({ title: '', amount: '' });
+      setFormData({ title: '', amount: '', description: '' });
       onClose();
     } catch (error) {
       console.error('Failed to add income', error);
@@ -49,6 +51,12 @@ export function NewIncomeModal({ isOpen, onClose }: NewIncomeModalProps) {
           onChange={e => setFormData({ ...formData, title: e.target.value })}
           required
           autoFocus
+        />
+        
+        <Input 
+          label="Description (Optional)"
+          value={formData.description}
+          onChange={e => setFormData({ ...formData, description: e.target.value })}
         />
         
         <Input 

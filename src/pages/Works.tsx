@@ -300,32 +300,20 @@ export default function Works() {
         initialData={selectedWork}
       />
 
-      <Modal isOpen={deleteModalOpen} onClose={() => { setDeleteModalOpen(false); setDeleteInput(''); }} title="Confirm Deletion">
+      <Modal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} title="Confirm Deletion">
         {workToDelete && (
           <div className="space-y-4">
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-lg flex items-start space-x-3 text-sm">
-              <AlertTriangle className="shrink-0 mt-0.5 text-red-500" size={18} />
-              <p>Are you sure you want to delete <strong>{workToDelete.title}</strong>? This action cannot be undone.</p>
-            </div>
-            
-            <p className="text-sm text-gray-600 dark:text-gray-400">Type <span className="font-bold text-red-600">DELETE</span> to confirm.</p>
-            
-            <Input 
-              placeholder="DELETE" 
-              value={deleteInput}
-              onChange={e => setDeleteInput(e.target.value)}
-              autoFocus
-            />
-
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Are you sure you want to delete <strong className="text-yaron-charcoal dark:text-white">{workToDelete?.title}</strong>? This action cannot be undone.
+            </p>
             <div className="pt-4 flex space-x-3">
-              <Button variant="outline" className="flex-1 dark:border-gray-700" onClick={() => { setDeleteModalOpen(false); setDeleteInput(''); }} disabled={isDeleting}>Cancel</Button>
+              <Button variant="outline" className="flex-1 dark:border-gray-700" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
               <Button 
-                variant="danger" 
-                className="flex-1" 
-                disabled={deleteInput !== 'DELETE' || isDeleting}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white border-none" 
                 onClick={confirmDeleteWork}
+                disabled={isDeleting}
               >
-                {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+                {isDeleting ? 'Deleting...' : 'Delete'}
               </Button>
             </div>
           </div>

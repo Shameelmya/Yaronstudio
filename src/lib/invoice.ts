@@ -124,18 +124,18 @@ export const generateInvoice = async (work: any, customer: any) => {
   // Summary
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Total Amount:`, 130, finalY);
+  doc.text(`Total Amount:`, 120, finalY);
   doc.setFont('helvetica', 'bold');
   doc.text(`Rs ${work.totalAmount}`, 196, finalY, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
-  doc.text(`Paid / Advance:`, 130, finalY + 8);
+  doc.text(`Paid / Advance:`, 120, finalY + 8);
   doc.text(`Rs ${work.paidAmount || 0}`, 196, finalY + 8, { align: 'right' });
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text(`Balance Due:`, 130, finalY + 20);
+  doc.text(`Balance Due:`, 120, finalY + 20);
   doc.text(`Rs ${Math.max(0, pendingAmount)}`, 196, finalY + 20, { align: 'right' });
 
   // Amount in words
@@ -218,18 +218,18 @@ export const generateCustomerMasterInvoice = async (customer: any, works: any[])
   doc.setFontSize(10);
   doc.setTextColor(51, 51, 51);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Grand Total:`, 130, finalY);
+  doc.text(`Grand Total:`, 120, finalY);
   doc.setFont('helvetica', 'bold');
   doc.text(`Rs ${grandTotal}`, 196, finalY, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
-  doc.text(`Total Paid:`, 130, finalY + 8);
+  doc.text(`Total Paid:`, 120, finalY + 8);
   doc.text(`Rs ${totalPaid}`, 196, finalY + 8, { align: 'right' });
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text(`Total Balance Due:`, 130, finalY + 20);
+  doc.text(`Total Balance Due:`, 120, finalY + 20);
   doc.text(`Rs ${Math.max(0, totalBalanceDue)}`, 196, finalY + 20, { align: 'right' });
 
   // Amount in words
@@ -257,4 +257,51 @@ export const generateCustomerMasterInvoice = async (customer: any, works: any[])
   // Save PDF
   const safeName = customer?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'Customer';
   doc.save(`Master_Invoice_${safeName}.pdf`);
+};
+
+export const generateReceipt = async (transaction: any, type: 'Income' | 'Expense') => {
+  const doc = new jsPDF();
+  const primaryColor: [number, number, number] = [213, 55, 104];
+  
+  const receiptId = `RCPT-${Date.now().toString().slice(-6)}`;
+  await drawInvoiceHeader(doc, receiptId, { name: transaction.title }); // Use title as name
+
+  // Title
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${type} Receipt`, 14, 100);
+  
+  // Details
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Date: ${format(new Date(transaction.date), 'MMM dd, yyyy')}`, 14, 110);
+  doc.text(`Category: ${type === 'Expense' ? transaction.category : 'General Income'}`, 14, 118);
+  if (transaction.description) {
+    doc.text(`Description: ${transaction.description}`, 14, 126);
+  }
+
+  // Amount box
+  doc.setFillColor(250, 250, 250);
+  doc.setDrawColor(200, 200, 200);
+  doc.rect(14, 140, 182, 30, 'FD');
+  
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Amount:', 20, 158);
+  
+  doc.setFontSize(16);
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text(`Rs ${transaction.amount}`, 180, 158, { align: 'right' });
+
+  // Signatory
+  const finalY = 200;
+  doc.setTextColor(51, 51, 51);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Shibili Moonnakkal', 196, finalY, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Signatory Authority', 196, finalY + 5, { align: 'right' });
+
+  doc.save(`${type}_Receipt_${transaction.id.slice(-6)}.pdf`);
 };

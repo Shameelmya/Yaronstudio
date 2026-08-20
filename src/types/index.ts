@@ -45,6 +45,7 @@ export interface Expense {
   id: string;
   studioId: string;
   title: string;
+  description?: string;
   amount: number;
   category: 'Equipment' | 'Maintenance' | 'Rent' | 'Salary' | 'Marketing' | 'Utilities' | 'Other';
   date: number;
@@ -54,6 +55,7 @@ export interface Income {
   id: string;
   studioId: string;
   title: string;
+  description?: string;
   amount: number;
   date: number;
 }

@@ -15,6 +15,7 @@ export function NewExpenseModal({ isOpen, onClose }: NewExpenseModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     amount: '',
+    description: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -28,11 +29,12 @@ export function NewExpenseModal({ isOpen, onClose }: NewExpenseModalProps) {
         id: Date.now().toString(),
         studioId: activeStudioId,
         title: formData.title,
+        description: formData.description || undefined,
         amount: Number(formData.amount),
         category: 'Other',
         date: Date.now(),
       });
-      setFormData({ title: '', amount: '' });
+      setFormData({ title: '', amount: '', description: '' });
       onClose();
     } catch (error) {
       console.error('Failed to add expense', error);
@@ -50,6 +52,12 @@ export function NewExpenseModal({ isOpen, onClose }: NewExpenseModalProps) {
           onChange={e => setFormData({ ...formData, title: e.target.value })}
           required
           autoFocus
+        />
+        
+        <Input 
+          label="Description (Optional)"
+          value={formData.description}
+          onChange={e => setFormData({ ...formData, description: e.target.value })}
         />
         
         <Input 

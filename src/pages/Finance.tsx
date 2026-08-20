@@ -1,24 +1,31 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { IndianRupee, TrendingUp, TrendingDown, FileText, Download, Plus, Filter, Music, Video, Headphones, Mic } from 'lucide-react';
+import { IndianRupee, TrendingUp, TrendingDown, Plus, Filter, Music, Video, Headphones, Mic } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAppStore } from '@/store/useAppStore';
-import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
+import { startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { NewExpenseModal } from '@/components/finance/NewExpenseModal';
 import { NewIncomeModal } from '@/components/finance/NewIncomeModal';
+import { AllTransactionsTable } from '@/components/finance/AllTransactionsTable';
+import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/Input';
 
-type TimeFilter = 'Today' | 'This Week' | 'This Month' | 'This Year' | 'All Time';
+type TimeFilter = 'Today' | 'This Week' | 'This Month' | 'This Year' | 'All Time' | 'Custom';
 
 export default function Finance() {
   const [activeTab, setActiveTab] = useState<'overview' | 'analysis' | 'invoices'>('overview');
-  const { activeStudioId, works, expenses, incomes } = useAppStore();
+  const { works, expenses, incomes } = useAppStore();
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('All');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('This Month');
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Custom Date Range State
+  const [isCustomDateModalOpen, setIsCustomDateModalOpen] = useState(false);
+  const [customDates, setCustomDates] = useState({ start: '', end: '' });
+  const [appliedCustomDates, setAppliedCustomDates] = useState<{ start: Date; end: Date } | null>(null);
 
   // Calculations based on time filter
   const today = new Date();
@@ -33,11 +40,14 @@ export default function Finance() {
         return { startDate: startOfMonth(today), endDate: endOfMonth(today) };
       case 'This Year':
         return { startDate: startOfYear(today), endDate: endOfYear(today) };
+      case 'Custom':
+        if (appliedCustomDates) return { startDate: appliedCustomDates.start, endDate: appliedCustomDates.end };
+        return { startDate: new Date(2000, 0, 1), endDate: new Date(2100, 0, 1) };
       case 'All Time':
       default:
         return { startDate: new Date(2000, 0, 1), endDate: new Date(2100, 0, 1) };
     }
-  }, [timeFilter]);
+  }, [timeFilter, appliedCustomDates]);
 
   const netIncome = useMemo(() => {
     const worksIncome = works.reduce((sum, w) => {
@@ -74,36 +84,6 @@ export default function Finance() {
     }, 0);
   }, [works]);
 
-  // 7 Month Chart Data
-  const chartData = useMemo(() => {
-    const data = [];
-    for (let i = 6; i >= 0; i--) {
-      const monthStart = startOfMonth(subMonths(today, i));
-      const monthEnd = endOfMonth(subMonths(today, i));
-      
-      const monthIncome = works.reduce((sum, w) => {
-        if (w.createdAt && isWithinInterval(new Date(w.createdAt as any), { start: monthStart, end: monthEnd })) {
-          return sum + (w.paidAmount || 0);
-        }
-        return sum;
-      }, 0);
-
-      const monthExpense = expenses.reduce((sum, e) => {
-        if (e.date && isWithinInterval(new Date(e.date), { start: monthStart, end: monthEnd })) {
-          return sum + e.amount;
-        }
-        return sum;
-      }, 0);
-
-      data.push({
-        name: format(monthStart, 'MMM'),
-        income: monthIncome,
-        expense: monthExpense
-      });
-    }
-    return data;
-  }, [works, expenses]);
-
   // Service Analysis
   const serviceData = useMemo(() => {
     const servicesMap: Record<string, { count: number, revenue: number, icon: any, color: string }> = {};
@@ -133,15 +113,16 @@ export default function Finance() {
     return serviceData.filter(d => d.service === selectedServiceFilter);
   }, [selectedServiceFilter, serviceData]);
 
-  // Completed Works for Invoices
-  const recentInvoices = useMemo(() => {
-    return works.filter(w => w.status === 'completed' || w.status === 'delivered')
-                .sort((a, b) => b.createdAt?.getTime() - a.createdAt?.getTime())
-                .slice(0, 5);
-  }, [works]);
-
-  const handleDownloadReport = () => {
-    window.print();
+  const applyCustomDate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customDates.start && customDates.end) {
+      setAppliedCustomDates({
+        start: startOfDay(new Date(customDates.start)),
+        end: endOfDay(new Date(customDates.end))
+      });
+      setTimeFilter('Custom');
+      setIsCustomDateModalOpen(false);
+    }
   };
 
   return (
@@ -153,15 +134,23 @@ export default function Finance() {
         </div>
         <div className="flex space-x-3 w-full sm:w-auto relative">
           <Button onClick={() => setIsFilterOpen(!isFilterOpen)} variant="outline" className="h-12 w-12 p-0 flex items-center justify-center shrink-0 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl relative">
-            <Filter size={20} className={timeFilter !== 'This Month' ? "text-yaron-magenta" : "text-gray-500 dark:text-gray-400"} />
+            <Filter size={20} className={timeFilter !== 'This Month' && timeFilter !== 'All Time' ? "text-yaron-magenta" : "text-gray-500 dark:text-gray-400"} />
           </Button>
           
           {isFilterOpen && (
             <div className="absolute right-0 top-14 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden animate-in fade-in zoom-in-95">
-              {(['Today', 'This Week', 'This Month', 'This Year', 'All Time'] as TimeFilter[]).map(filter => (
+              {(['Today', 'This Week', 'This Month', 'This Year', 'All Time', 'Custom'] as TimeFilter[]).map(filter => (
                 <button
                   key={filter}
-                  onClick={() => { setTimeFilter(filter); setIsFilterOpen(false); }}
+                  onClick={() => { 
+                    if (filter === 'Custom') {
+                      setIsCustomDateModalOpen(true);
+                      setIsFilterOpen(false);
+                    } else {
+                      setTimeFilter(filter); 
+                      setIsFilterOpen(false); 
+                    }
+                  }}
                   className={cn(
                     "w-full text-left px-4 py-3 text-sm transition-colors",
                     timeFilter === filter 
@@ -175,11 +164,11 @@ export default function Finance() {
             </div>
           )}
           
-          <Button onClick={() => setIsIncomeModalOpen(true)} className="flex-1 sm:w-auto bg-green-600 hover:bg-green-700 text-white h-12 rounded-xl border-none shadow-md">
-            <Plus size={18} className="mr-2" /> Add Income
+          <Button onClick={() => setIsIncomeModalOpen(true)} className="flex-1 sm:w-auto bg-green-600 hover:bg-green-700 text-white h-12 rounded-xl border-none shadow-md px-4">
+            <Plus size={18} className="mr-2" /> Income
           </Button>
-          <Button onClick={() => setIsExpenseModalOpen(true)} className="flex-1 sm:w-auto bg-red-600 hover:bg-red-700 text-white h-12 rounded-xl border-none shadow-md">
-            <Plus size={18} className="mr-2" /> Add Expense
+          <Button onClick={() => setIsExpenseModalOpen(true)} className="flex-1 sm:w-auto bg-red-600 hover:bg-red-700 text-white h-12 rounded-xl border-none shadow-md px-4">
+            <Plus size={18} className="mr-2" /> Expense
           </Button>
         </div>
       </div>
@@ -246,34 +235,13 @@ export default function Finance() {
             </Card>
           </div>
 
-          <Card className="p-6 dark:bg-gray-900 dark:border-gray-800">
-            <h3 className="font-bold text-lg text-yaron-charcoal dark:text-white mb-6">Income vs Expenses (Last 7 Months)</h3>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 5, right: 0, left: -20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.2} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} tickFormatter={(value) => `₹${value/1000}k`} />
-                  <Tooltip 
-                    cursor={{fill: 'rgba(107, 114, 128, 0.1)'}}
-                    contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                    formatter={(value: any) => [formatCurrency(Number(value)), '']}
-                  />
-                  <Bar dataKey="income" name="Income" fill="#F45B0A" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="expense" name="Expense" fill="#C72D5C" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
+          <AllTransactionsTable startDate={startDate} endDate={endDate} />
         </div>
       )}
 
       {activeTab === 'analysis' && (
         <div className="space-y-6">
-          <Card className="dark:bg-gray-900 dark:border-gray-800">
+          <Card className="dark:bg-gray-900 dark:border-gray-800 p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <h2 className="text-lg font-bold text-yaron-charcoal dark:text-white">Service Sales Analysis</h2>
               <div className="flex items-center space-x-2">
@@ -330,6 +298,29 @@ export default function Finance() {
           </Card>
         </div>
       )}
+
+      <Modal isOpen={isCustomDateModalOpen} onClose={() => setIsCustomDateModalOpen(false)} title="Select Custom Date Range">
+        <form onSubmit={applyCustomDate} className="space-y-4">
+          <Input 
+            label="Start Date" 
+            type="date" 
+            value={customDates.start}
+            onChange={(e) => setCustomDates({ ...customDates, start: e.target.value })}
+            required
+          />
+          <Input 
+            label="End Date" 
+            type="date" 
+            value={customDates.end}
+            onChange={(e) => setCustomDates({ ...customDates, end: e.target.value })}
+            required
+          />
+          <div className="flex pt-4 space-x-3">
+            <Button variant="outline" className="flex-1" type="button" onClick={() => setIsCustomDateModalOpen(false)}>Cancel</Button>
+            <Button className="flex-1 bg-yaron-magenta text-white border-none" type="submit">Apply Filter</Button>
+          </div>
+        </form>
+      </Modal>
 
       <NewExpenseModal isOpen={isExpenseModalOpen} onClose={() => setIsExpenseModalOpen(false)} />
       <NewIncomeModal isOpen={isIncomeModalOpen} onClose={() => setIsIncomeModalOpen(false)} />

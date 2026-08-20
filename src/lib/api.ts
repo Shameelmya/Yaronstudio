@@ -101,6 +101,22 @@ export const addIncome = async (income: any) => {
   await setDoc(doc(db, 'incomes', income.id), income);
 };
 
+export const updateExpense = async (id: string, expense: Partial<Expense>) => {
+  await updateDoc(doc(db, 'expenses', id), expense);
+};
+
+export const updateIncome = async (id: string, income: any) => {
+  await updateDoc(doc(db, 'incomes', id), income);
+};
+
+export const deleteExpense = async (id: string) => {
+  await deleteDoc(doc(db, 'expenses', id));
+};
+
+export const deleteIncome = async (id: string) => {
+  await deleteDoc(doc(db, 'incomes', id));
+};
+
 export const listenToExpenses = (studioId: string, callback: (expenses: Expense[]) => void) => {
   const q = query(collection(db, 'expenses'));
   return onSnapshot(q, (snap) => {
