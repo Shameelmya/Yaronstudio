@@ -83,6 +83,14 @@ export const updateBookingStatus = async (bookingId: string, status: Booking['st
   await updateDoc(doc(db, 'bookings', bookingId), { status });
 };
 
+export const updateBooking = async (bookingId: string, data: Partial<Booking>) => {
+  await updateDoc(doc(db, 'bookings', bookingId), data);
+};
+
+export const deleteBooking = async (bookingId: string) => {
+  await deleteDoc(doc(db, 'bookings', bookingId));
+};
+
 export const listenToBookings = (studioId: string, callback: (bookings: Booking[]) => void) => {
   const q = query(collection(db, 'bookings'), orderBy('date', 'desc'));
   return onSnapshot(q, (snap) => {

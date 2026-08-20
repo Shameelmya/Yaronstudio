@@ -6,14 +6,19 @@ import { cn } from '@/lib/utils';
 import { format, isSameDay } from 'date-fns';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { createBooking, updateBookingStatus, createWork, getCustomerByPhone } from '@/lib/api';
+import { createBooking, updateBookingStatus, updateBooking, deleteBooking, createWork, getCustomerByPhone } from '@/lib/api';
 import { useAppStore } from '@/store/useAppStore';
+import { Edit2, Trash2 } from 'lucide-react';
 
 export default function Bookings() {
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   const [newBookingData, setNewBookingData] = useState({ title: '', customer: '', phone: '', date: '', time: '' });
   const [bookingError, setBookingError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
+  
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<any>(null);
   
   const [moveToWorksModalOpen, setMoveToWorksModalOpen] = useState(false);
   const [bookingToMove, setBookingToMove] = useState<any>(null);
@@ -76,7 +81,7 @@ export default function Bookings() {
       );
     });
 
-    if (isDuplicate) {
+    if (isDuplicate && !editingBookingId) {
       const duplicateBooking = bookings.find(b => b.time.getHours() === newBookingTime.getHours() && b.time.getDate() === newBookingTime.getDate() && b.status === 'scheduled');
       setBookingError(`${duplicateBooking?.customerId || 'Someone'}'s work is booked for this time. No other booking allowed.`);
       return;
@@ -84,24 +89,54 @@ export default function Bookings() {
 
     try {
       setIsCreating(true);
-      await createBooking({
-        id: Date.now().toString(),
-        studioId: activeStudioId,
-        date: newBookingTime.getTime(),
-        service: newBookingData.title || 'Studio Session',
-        customerId: newBookingData.customer,
-        // Hack: store phone in workId for now since Booking type doesn't have phone
-        workId: newBookingData.phone || '',
-        duration: 60,
-        status: 'scheduled'
-      });
+      if (editingBookingId) {
+        await updateBooking(editingBookingId, {
+          date: newBookingTime.getTime(),
+          service: newBookingData.title || 'Studio Session',
+          customerId: newBookingData.customer,
+          workId: newBookingData.phone || '',
+        });
+      } else {
+        await createBooking({
+          id: Date.now().toString(),
+          studioId: activeStudioId,
+          date: newBookingTime.getTime(),
+          service: newBookingData.title || 'Studio Session',
+          customerId: newBookingData.customer,
+          workId: newBookingData.phone || '',
+          duration: 60,
+          status: 'scheduled'
+        });
+      }
       setIsNewBookingOpen(false);
+      setEditingBookingId(null);
       setNewBookingData({ title: '', customer: '', phone: '', date: '', time: '' });
       setExistingCustomer(null);
     } catch (err) {
       setBookingError('Failed to create booking.');
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleEditClick = (booking: any) => {
+    const bookingDate = new Date(booking.date);
+    setNewBookingData({
+      title: booking.service,
+      customer: booking.customerId,
+      phone: booking.workId, // Hack where we store phone
+      date: format(bookingDate, 'yyyy-MM-dd'),
+      time: format(bookingDate, 'HH:mm')
+    });
+    setEditingBookingId(booking.id);
+    setIsNewBookingOpen(true);
+  };
+
+  const handleDeleteClick = async () => {
+    if (bookingToDelete) {
+      await deleteBooking(bookingToDelete.id);
+      setDeleteModalOpen(false);
+      setBookingToDelete(null);
     }
   };
 
@@ -144,7 +179,7 @@ export default function Bookings() {
           <h1 className="text-2xl font-bold text-yaron-charcoal dark:text-white">Waiting List / Bookings</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">Active bookings waiting to be converted into works.</p>
         </div>
-        <Button onClick={() => setIsNewBookingOpen(true)} className="w-full sm:w-auto shadow-md h-12 text-base bg-yaron-gradient border-none">
+        <Button onClick={() => { setEditingBookingId(null); setNewBookingData({ title: '', customer: '', phone: '', date: '', time: '' }); setIsNewBookingOpen(true); }} className="w-full sm:w-auto shadow-md h-12 text-base bg-yaron-gradient border-none">
           <Plus size={20} className="mr-2" />
           Add Booking
         </Button>
@@ -176,12 +211,32 @@ export default function Bookings() {
                     </a>
                   </div>
                 </div>
-                <Button 
-                  onClick={() => { setBookingToMove(booking); setMoveToWorksModalOpen(true); }}
-                  className="w-full sm:w-auto bg-yaron-charcoal hover:bg-black text-white dark:bg-gray-800 dark:hover:bg-gray-700 border-none shadow-sm h-12"
-                >
-                  Move to Works <ArrowRight size={18} className="ml-2" />
-                </Button>
+                <div className="flex items-center space-x-2 w-full sm:w-auto">
+                  <Button 
+                    onClick={() => { setBookingToMove(booking); setMoveToWorksModalOpen(true); }}
+                    className="flex-1 sm:w-auto bg-yaron-charcoal hover:bg-black text-white dark:bg-gray-800 dark:hover:bg-gray-700 border-none shadow-sm h-12 px-4"
+                  >
+                    Move to Works <ArrowRight size={18} className="ml-2 hidden sm:block" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => handleEditClick(booking)}
+                    className="h-12 w-12 text-gray-400 hover:text-yaron-magenta dark:hover:text-yaron-magenta shrink-0"
+                    title="Edit Booking"
+                  >
+                    <Edit2 size={18} />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => { setBookingToDelete(booking); setDeleteModalOpen(true); }}
+                    className="h-12 w-12 text-gray-400 hover:text-red-500 dark:hover:text-red-400 shrink-0"
+                    title="Delete Booking"
+                  >
+                    <Trash2 size={18} />
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
@@ -193,7 +248,8 @@ export default function Bookings() {
         )}
       </div>
 
-      <Modal isOpen={isNewBookingOpen} onClose={() => { setIsNewBookingOpen(false); setBookingError(''); }} title="New Booking">
+
+      <Modal isOpen={isNewBookingOpen} onClose={() => { setIsNewBookingOpen(false); setBookingError(''); setEditingBookingId(null); }} title={editingBookingId ? "Edit Booking" : "New Booking"}>
         <form onSubmit={handleCreateBooking} className="space-y-4">
           {bookingError && (
             <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-sm rounded-lg flex items-start space-x-2 border border-red-200 dark:border-red-900/30">
@@ -248,11 +304,31 @@ export default function Bookings() {
               required
             />
           </div>
+
           <div className="pt-4 flex space-x-3">
-            <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsNewBookingOpen(false); setBookingError(''); }} disabled={isCreating}>Cancel</Button>
-            <Button type="submit" className="flex-1 bg-yaron-gradient text-white border-none" disabled={isCreating}>{isCreating ? 'Adding...' : 'Add Booking'}</Button>
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsNewBookingOpen(false); setEditingBookingId(null); }} disabled={isCreating}>Cancel</Button>
+            <Button type="submit" className="flex-1 bg-yaron-magenta hover:bg-pink-600 text-white border-none" disabled={isCreating}>
+              {isCreating ? 'Saving...' : (editingBookingId ? 'Save Changes' : 'Confirm Booking')}
+            </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} title="Confirm Deletion">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Are you sure you want to delete this booking for <strong className="text-yaron-charcoal dark:text-white">{bookingToDelete?.customerId}</strong>?
+          </p>
+          <div className="pt-4 flex space-x-3">
+            <Button variant="outline" className="flex-1 dark:border-gray-700" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+            <Button 
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white border-none" 
+              onClick={handleDeleteClick}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       <Modal isOpen={moveToWorksModalOpen} onClose={() => setMoveToWorksModalOpen(false)} title="Move to Works">

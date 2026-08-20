@@ -42,7 +42,7 @@ export function NewIncomeModal({ isOpen, onClose, editData }: NewIncomeModalProp
       if (editData) {
         await updateIncome(editData.id, {
           title: formData.title,
-          description: formData.description || undefined,
+          description: formData.description || '',
           amount: Number(formData.amount),
         });
       } else {
@@ -50,7 +50,7 @@ export function NewIncomeModal({ isOpen, onClose, editData }: NewIncomeModalProp
           id: Date.now().toString(),
           studioId: activeStudioId,
           title: formData.title,
-          description: formData.description || undefined,
+          description: formData.description || '',
           amount: Number(formData.amount),
           date: Date.now(),
         });

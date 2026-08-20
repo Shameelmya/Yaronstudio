@@ -37,7 +37,7 @@ export default function Home() {
     const unsubBookings = listenToBookings(activeStudioId, (bookings) => {
       const todayString = format(new Date(), 'yyyy-MM-dd');
       const todaySessions = bookings
-        .filter(b => format(new Date(b.date), 'yyyy-MM-dd') === todayString)
+        .filter(b => format(new Date(b.date), 'yyyy-MM-dd') === todayString && b.status === 'scheduled')
         .map(b => ({
           id: b.id, title: b.service, work: 'Work ID: ' + b.workId, customer: b.customerId, time: new Date(b.date), status: b.status
         }));

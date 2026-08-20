@@ -42,7 +42,7 @@ export function NewExpenseModal({ isOpen, onClose, editData }: NewExpenseModalPr
       if (editData) {
         await updateExpense(editData.id, {
           title: formData.title,
-          description: formData.description || undefined,
+          description: formData.description || '',
           amount: Number(formData.amount),
         });
       } else {
@@ -50,7 +50,7 @@ export function NewExpenseModal({ isOpen, onClose, editData }: NewExpenseModalPr
           id: Date.now().toString(),
           studioId: activeStudioId,
           title: formData.title,
-          description: formData.description || undefined,
+          description: formData.description || '',
           amount: Number(formData.amount),
           category: 'Other',
           date: Date.now(),
