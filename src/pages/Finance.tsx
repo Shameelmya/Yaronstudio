@@ -8,15 +8,18 @@ import { listenToWorks, listenToExpenses } from '@/lib/api';
 import { useAppStore } from '@/store/useAppStore';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { NewExpenseModal } from '@/components/finance/NewExpenseModal';
+import { NewIncomeModal } from '@/components/finance/NewIncomeModal';
 
 export default function Finance() {
   const [activeTab, setActiveTab] = useState<'overview' | 'analysis' | 'invoices'>('overview');
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('All');
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   
   const { activeStudioId } = useAppStore();
   const [works, setWorks] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [incomes, setIncomes] = useState<any[]>([]);
 
   useEffect(() => {
     if (!activeStudioId) return;
@@ -28,8 +31,12 @@ export default function Finance() {
     const unsubExpenses = listenToExpenses(activeStudioId, (fetchedExpenses) => {
       setExpenses(fetchedExpenses);
     });
+    
+    const unsubIncomes = listenToIncomes(activeStudioId, (fetchedIncomes) => {
+      setIncomes(fetchedIncomes);
+    });
 
-    return () => { unsubWorks(); unsubExpenses(); };
+    return () => { unsubWorks(); unsubExpenses(); unsubIncomes(); };
   }, [activeStudioId]);
 
   // Calculations for current month
@@ -38,13 +45,22 @@ export default function Finance() {
   const currentMonthEnd = endOfMonth(today);
 
   const netIncome = useMemo(() => {
-    return works.reduce((sum, w) => {
+    const worksIncome = works.reduce((sum, w) => {
       if (w.createdAt && isWithinInterval(w.createdAt, { start: currentMonthStart, end: currentMonthEnd })) {
         return sum + (w.paidAmount || 0);
       }
       return sum;
     }, 0);
-  }, [works, currentMonthStart, currentMonthEnd]);
+    
+    const miscIncome = incomes.reduce((sum, i) => {
+      if (i.date && isWithinInterval(i.date, { start: currentMonthStart, end: currentMonthEnd })) {
+        return sum + i.amount;
+      }
+      return sum;
+    }, 0);
+    
+    return worksIncome + miscIncome;
+  }, [works, incomes, currentMonthStart, currentMonthEnd]);
 
   const totalExpenses = useMemo(() => {
     return expenses.reduce((sum, e) => {
@@ -141,32 +157,40 @@ export default function Finance() {
           <p className="text-gray-500 dark:text-gray-400 text-sm">Manage income, expenses, and invoices</p>
         </div>
         <div className="flex space-x-2 w-full sm:w-auto">
-          <Button variant="outline" className="flex-1 sm:flex-none" onClick={handleDownloadReport}>
-            <Download size={18} className="mr-2" />
-            Report
+          <Button onClick={() => setIsIncomeModalOpen(true)} className="flex-1 sm:flex-none shadow-md bg-green-600 hover:bg-green-700 text-white border-none h-12 px-6 font-semibold">
+            <Plus size={18} className="mr-2" />
+            Add Income
           </Button>
-          <Button onClick={() => setIsExpenseModalOpen(true)} className="flex-1 sm:flex-none shadow-md bg-yaron-gradient text-white border-none h-12 px-6 font-semibold">
+          <Button onClick={() => setIsExpenseModalOpen(true)} className="flex-1 sm:flex-none shadow-md bg-red-600 hover:bg-red-700 text-white border-none h-12 px-6 font-semibold">
             <Plus size={18} className="mr-2" />
             Add Expense
           </Button>
         </div>
       </div>
 
-      <div className="flex overflow-x-auto hide-scrollbar bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-full sm:w-fit">
-        {['overview', 'analysis', 'invoices'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            className={cn(
-              "flex-1 sm:px-6 py-2 rounded-lg text-sm font-medium transition-all capitalize whitespace-nowrap",
-              activeTab === tab 
-                ? "bg-white dark:bg-gray-700 text-yaron-charcoal dark:text-white shadow-sm" 
-                : "text-gray-500 dark:text-gray-400 hover:text-yaron-charcoal dark:hover:text-white"
-            )}
-          >
-            {tab}
-          </button>
-        ))}
+      <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-full sm:w-fit">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={cn(
+            "flex-1 sm:px-6 py-2 rounded-lg text-sm font-bold transition-all",
+            activeTab === 'overview' 
+              ? "bg-white dark:bg-gray-700 text-yaron-charcoal dark:text-white shadow-sm" 
+              : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+          )}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab('analysis')}
+          className={cn(
+            "flex-1 sm:px-6 py-2 rounded-lg text-sm font-bold transition-all",
+            activeTab === 'analysis' 
+              ? "bg-white dark:bg-gray-700 text-yaron-charcoal dark:text-white shadow-sm" 
+              : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+          )}
+        >
+          Analysis
+        </button>
       </div>
 
       {activeTab === 'overview' && (
@@ -291,47 +315,11 @@ export default function Finance() {
         </div>
       )}
 
-      {activeTab === 'invoices' && (
-        <Card className="flex-1 dark:bg-gray-900 dark:border-gray-800">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold text-yaron-charcoal dark:text-white">Recent Invoices (Completed Works)</h2>
-            <Button variant="outline" size="sm" className="dark:border-gray-700 dark:text-white" onClick={handleDownloadReport}>Generate New</Button>
-          </div>
-          <div className="space-y-4">
-            {recentInvoices.map((work, i) => (
-              <div key={work.id} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-yaron-magenta/30 transition-colors bg-gray-50/50 dark:bg-gray-800/50">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-lg bg-yaron-magenta/5 dark:bg-yaron-magenta/20 flex items-center justify-center text-yaron-magenta">
-                    <FileText size={24} />
-                  </div>
-                  <div>
-                    <p className="font-bold text-yaron-charcoal dark:text-white">INV-{work.id.slice(-6)}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{work.customerId} • {work.createdAt ? format(work.createdAt, 'MMM dd, yyyy') : 'No date'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-right hidden sm:block">
-                    <p className="font-bold text-yaron-charcoal dark:text-white">{formatCurrency(work.totalAmount)}</p>
-                    {work.totalAmount - (work.paidAmount || 0) <= 0 ? (
-                      <p className="text-xs text-green-600 dark:text-green-400 font-bold mt-0.5 uppercase tracking-wider">Paid</p>
-                    ) : (
-                      <p className="text-xs text-red-600 dark:text-red-400 font-bold mt-0.5 uppercase tracking-wider">Pending {formatCurrency(work.totalAmount - (work.paidAmount || 0))}</p>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-charcoal dark:hover:text-white" onClick={handleDownloadReport}>
-                    <Download size={18} />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {recentInvoices.length === 0 && (
-               <div className="text-center text-gray-500 py-6">No completed works to invoice yet.</div>
-            )}
-          </div>
-        </Card>
+        </div>
       )}
 
       <NewExpenseModal isOpen={isExpenseModalOpen} onClose={() => setIsExpenseModalOpen(false)} />
+      <NewIncomeModal isOpen={isIncomeModalOpen} onClose={() => setIsIncomeModalOpen(false)} />
     </div>
   );
 }

@@ -40,6 +40,23 @@ export interface Service {
   price: number;
 }
 
+export interface Expense {
+  id: string;
+  studioId: string;
+  title: string;
+  amount: number;
+  category: 'Equipment' | 'Maintenance' | 'Rent' | 'Salary' | 'Marketing' | 'Utilities' | 'Other';
+  date: number;
+}
+
+export interface Income {
+  id: string;
+  studioId: string;
+  title: string;
+  amount: number;
+  date: number;
+}
+
 export interface Payment {
   id: string;
   workId: string;

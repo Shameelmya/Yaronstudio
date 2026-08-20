@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Plus, Clock, User, Phone, ArrowRight, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Clock, User, Phone, ArrowRight, AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isSameDay } from 'date-fns';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { listenToBookings, createBooking, updateBookingStatus, createWork } from '@/lib/api';
+import { listenToBookings, createBooking, updateBookingStatus, createWork, getCustomerByPhone } from '@/lib/api';
 import { useAppStore } from '@/store/useAppStore';
 
 export default function Bookings() {
@@ -21,6 +21,27 @@ export default function Bookings() {
   
   const { activeStudioId } = useAppStore();
   const [bookings, setBookings] = useState<any[]>([]);
+  const [existingCustomer, setExistingCustomer] = useState<any>(null);
+
+  // Auto-detect customer by phone
+  useEffect(() => {
+    const checkPhone = async () => {
+      const phone = newBookingData.phone;
+      if (phone && phone.length >= 10) {
+        const customer = await getCustomerByPhone(phone);
+        if (customer) {
+          setExistingCustomer(customer);
+          setNewBookingData(prev => ({...prev, customer: customer.name}));
+        } else {
+          setExistingCustomer(null);
+        }
+      } else {
+        setExistingCustomer(null);
+      }
+    };
+    const timeoutId = setTimeout(checkPhone, 500);
+    return () => clearTimeout(timeoutId);
+  }, [newBookingData.phone]);
 
   useEffect(() => {
     if (!activeStudioId) return;
@@ -83,6 +104,7 @@ export default function Bookings() {
       });
       setIsNewBookingOpen(false);
       setNewBookingData({ title: '', customer: '', phone: '', date: '', time: '' });
+      setExistingCustomer(null);
     } catch (err) {
       setBookingError('Failed to create booking.');
     } finally {
@@ -187,18 +209,27 @@ export default function Bookings() {
             </div>
           )}
           <Input 
+            label="Phone Number" 
+            placeholder=""
+            type="tel"
+            value={newBookingData.phone}
+            onChange={e => setNewBookingData({...newBookingData, phone: e.target.value})}
+            required
+            autoFocus
+          />
+
+          {existingCustomer && (
+            <div className="bg-green-50 dark:bg-green-900/10 p-3 rounded-lg border border-green-100 dark:border-green-900/20 flex items-center space-x-2 text-sm">
+              <CheckCircle2 className="text-green-600 dark:text-green-500 shrink-0" size={16} />
+              <p className="font-medium text-green-900 dark:text-green-400">Customer found: {existingCustomer.name}</p>
+            </div>
+          )}
+
+          <Input 
             label="Customer Name" 
             placeholder=""
             value={newBookingData.customer}
             onChange={e => setNewBookingData({...newBookingData, customer: e.target.value})}
-            required
-            autoFocus
-          />
-          <Input 
-            label="Phone Number" 
-            placeholder=""
-            value={newBookingData.phone}
-            onChange={e => setNewBookingData({...newBookingData, phone: e.target.value})}
             required
           />
           <Input 

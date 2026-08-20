@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { addExpense } from '@/lib/api';
+import { addIncome } from '@/lib/api';
 import { useAppStore } from '@/store/useAppStore';
 
-interface NewExpenseModalProps {
+interface NewIncomeModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function NewExpenseModal({ isOpen, onClose }: NewExpenseModalProps) {
+export function NewIncomeModal({ isOpen, onClose }: NewIncomeModalProps) {
   const { activeStudioId } = useAppStore();
   const [formData, setFormData] = useState({
     title: '',
@@ -24,28 +24,27 @@ export function NewExpenseModal({ isOpen, onClose }: NewExpenseModalProps) {
 
     try {
       setLoading(true);
-      await addExpense({
+      await addIncome({
         id: Date.now().toString(),
         studioId: activeStudioId,
         title: formData.title,
         amount: Number(formData.amount),
-        category: 'Other',
         date: Date.now(),
       });
       setFormData({ title: '', amount: '' });
       onClose();
     } catch (error) {
-      console.error('Failed to add expense', error);
+      console.error('Failed to add income', error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add New Expense">
+    <Modal isOpen={isOpen} onClose={onClose} title="Add New Income">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input 
-          label="Expense Title"
+          label="Income Source / Title"
           value={formData.title}
           onChange={e => setFormData({ ...formData, title: e.target.value })}
           required
@@ -62,8 +61,8 @@ export function NewExpenseModal({ isOpen, onClose }: NewExpenseModalProps) {
 
         <div className="pt-4 flex space-x-3">
           <Button type="button" variant="ghost" className="flex-1" onClick={onClose} disabled={loading}>Cancel</Button>
-          <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700 text-white border-none" disabled={loading}>
-            {loading ? 'Adding...' : 'Add Expense'}
+          <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 text-white border-none" disabled={loading}>
+            {loading ? 'Adding...' : 'Add Income'}
           </Button>
         </div>
       </form>

@@ -46,6 +46,13 @@ export const listenToCustomers = (studioId: string, callback: (customers: Custom
   });
 };
 
+export const getCustomerByPhone = async (phone: string): Promise<Customer | null> => {
+  const q = query(collection(db, 'customers'), where('phone', '==', phone));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  return snap.docs[0].data() as Customer;
+};
+
 // ==============================
 // Bookings API
 // ==============================
@@ -71,10 +78,23 @@ export const addExpense = async (expense: Expense) => {
   await setDoc(doc(db, 'expenses', expense.id), expense);
 };
 
+export const addIncome = async (income: any) => {
+  await setDoc(doc(db, 'incomes', income.id), income);
+};
+
 export const listenToExpenses = (studioId: string, callback: (expenses: Expense[]) => void) => {
   const q = query(collection(db, 'expenses'));
   return onSnapshot(q, (snap) => {
     const data = snap.docs.map(d => d.data() as Expense);
+    data.sort((a, b) => b.date - a.date);
+    callback(data);
+  });
+};
+
+export const listenToIncomes = (studioId: string, callback: (incomes: any[]) => void) => {
+  const q = query(collection(db, 'incomes'));
+  return onSnapshot(q, (snap) => {
+    const data = snap.docs.map(d => d.data());
     data.sort((a, b) => b.date - a.date);
     callback(data);
   });

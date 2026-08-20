@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { updateWork, listenToWorks, deleteWork } from '@/lib/api';
+import { updateWork, listenToWorks, deleteWork, listenToCustomers } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,7 +11,7 @@ import { NewWorkModal } from '@/components/works/NewWorkModal';
 import { Modal } from '@/components/ui/Modal';
 import { Work } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
-import { format, isSameDay, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { format, isSameDay, isWithinInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, differenceInDays, startOfDay } from 'date-fns';
 
 export default function Works() {
   const location = useLocation();
@@ -23,6 +23,7 @@ export default function Works() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWork, setSelectedWork] = useState<any>(null);
   const [works, setWorks] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const { activeStudioId } = useAppStore();
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -33,24 +34,28 @@ export default function Works() {
 
   useEffect(() => {
     if (!activeStudioId) return;
-    const unsubscribe = listenToWorks(activeStudioId, (fetchedWorks) => {
-      // transform Work to match our UI for now, or just use Work directly
-      const transformedWorks = fetchedWorks.map(w => ({
-        id: w.id,
-        title: w.title,
-        customer: w.customerId, // Should join with customers in reality, but keeping it simple
-        services: w.services || [],
-        phone: 'N/A', // Mocking phone since we don't have customer join yet
-        status: w.status,
-        total: w.totalAmount,
-        pending: w.totalAmount - (w.paidAmount || 0),
-        due: w.dueDate ? format(w.dueDate, 'yyyy-MM-dd') : 'No Date',
-        rawDueDate: w.dueDate ? (w.dueDate instanceof Date ? w.dueDate : new Date(w.dueDate)) : null
-      }));
-      setWorks(transformedWorks);
+    
+    const unsubCustomers = listenToCustomers(activeStudioId, (fetchedCustomers) => {
+      setCustomers(fetchedCustomers);
     });
-    return () => unsubscribe();
+    
+    const unsubscribe = listenToWorks(activeStudioId, (fetchedWorks) => {
+      setWorks(fetchedWorks);
+    });
+    
+    return () => { unsubscribe(); unsubCustomers(); };
   }, [activeStudioId]);
+  
+  const getCustomer = (id: string) => customers.find(c => c.id === id);
+
+  const getWhatsAppMessage = (work: any, customer: any) => {
+    const today = startOfDay(new Date());
+    const daysDue = work.dueDate ? differenceInDays(today, startOfDay(work.dueDate)) : 0;
+    const daysText = daysDue > 0 ? `has been pending for ${daysDue} days` : `is due soon`;
+    const pending = work.totalAmount - (work.paidAmount || 0);
+    const msg = `Hi ${customer?.name || ''}, this is a gentle reminder that your payment of Rs. ${pending} for ${work.title} ${daysText}. Please clear the dues. Thank you!`;
+    return encodeURIComponent(msg);
+  };
 
   const filters = [
     { id: 'all', label: 'All Works' },
@@ -62,20 +67,23 @@ export default function Works() {
 
   const filteredWorks = works.filter(work => {
     const matchesFilter = activeFilter === 'all' || work.status === activeFilter;
+    const customer = getCustomer(work.customerId);
+    const customerName = customer?.name || work.customerId;
     const matchesSearch = work.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          work.customer.toLowerCase().includes(searchQuery.toLowerCase());
+                          customerName.toLowerCase().includes(searchQuery.toLowerCase());
                           
     let matchesTime = true;
-    if (timeFilter !== 'all' && work.rawDueDate) {
+    if (timeFilter !== 'all' && work.dueDate) {
       const today = new Date();
+      const rawDueDate = work.dueDate instanceof Date ? work.dueDate : new Date(work.dueDate);
       if (timeFilter === 'today') {
-        matchesTime = isSameDay(work.rawDueDate, today);
+        matchesTime = isSameDay(rawDueDate, today);
       } else if (timeFilter === 'week') {
-        matchesTime = isWithinInterval(work.rawDueDate, { start: startOfWeek(today), end: endOfWeek(today) });
+        matchesTime = isWithinInterval(rawDueDate, { start: startOfWeek(today), end: endOfWeek(today) });
       } else if (timeFilter === 'month') {
-        matchesTime = isWithinInterval(work.rawDueDate, { start: startOfMonth(today), end: endOfMonth(today) });
+        matchesTime = isWithinInterval(rawDueDate, { start: startOfMonth(today), end: endOfMonth(today) });
       }
-    } else if (timeFilter !== 'all' && !work.rawDueDate) {
+    } else if (timeFilter !== 'all' && !work.dueDate) {
       matchesTime = false;
     }
 
@@ -217,38 +225,48 @@ export default function Works() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
-              {filteredWorks.map((work) => (
+              {filteredWorks.map((work) => {
+                const customer = getCustomer(work.customerId);
+                const pendingAmount = work.totalAmount - (work.paidAmount || 0);
+                return (
                 <tr key={work.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
-                  <td className="py-4">
+                  <td className="py-4 pr-4">
                     <p className="font-semibold text-yaron-charcoal dark:text-white">{work.title}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{work.services.join(', ')}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{work.services?.join(', ')}</p>
                   </td>
-                  <td className="py-4">
-                    <p className="font-medium text-yaron-charcoal dark:text-white">{work.customer}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <a href={`tel:${work.phone}`} className="text-xs text-yaron-magenta font-semibold hover:underline flex items-center">
-                        <Phone size={12} className="mr-1" /> Call
-                      </a>
+                  <td className="py-4 pr-4">
+                    <p className="font-medium text-yaron-charcoal dark:text-white">{customer?.name || work.customerId} {customer?.place && <span className="text-gray-500 font-normal">({customer.place})</span>}</p>
+                    <div className="flex items-center space-x-3 mt-1">
+                      {customer?.phone && (
+                        <a href={`tel:${customer.phone}`} className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center">
+                          <Phone size={12} className="mr-1" /> Call
+                        </a>
+                      )}
+                      {customer?.whatsapp && (
+                        <a href={`https://wa.me/${customer.whatsapp.replace(/\D/g, '')}?text=${getWhatsAppMessage(work, customer)}`} target="_blank" rel="noreferrer" className="text-xs text-green-600 dark:text-green-400 font-semibold hover:underline flex items-center">
+                          <Phone size={12} className="mr-1" /> WhatsApp
+                        </a>
+                      )}
                     </div>
                   </td>
-                  <td className="py-4">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{work.due}</span>
+                  <td className="py-4 pr-4">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{work.dueDate ? format(work.dueDate instanceof Date ? work.dueDate : new Date(work.dueDate), 'MMM dd, yyyy') : 'No Date'}</span>
                   </td>
-                  <td className="py-4">
+                  <td className="py-4 pr-4">
                     {getStatusDropdown(work)}
                   </td>
-                  <td className="py-4 text-right font-bold text-yaron-charcoal dark:text-white">
-                    {formatCurrency(work.total)}
+                  <td className="py-4 pr-4 text-right font-bold text-yaron-charcoal dark:text-white">
+                    {formatCurrency(work.totalAmount)}
                   </td>
-                  <td className="py-4 text-right">
-                    <span className={cn("font-bold", work.pending > 0 ? "text-yaron-orange" : "text-green-500")}>
-                      {formatCurrency(work.pending)}
+                  <td className="py-4 pr-4 text-right">
+                    <span className={cn("font-bold", pendingAmount > 0 ? "text-yaron-orange" : "text-green-500")}>
+                      {formatCurrency(pendingAmount)}
                     </span>
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex justify-end space-x-2">
-                      <Button variant="ghost" size="icon" className="text-gray-400 hover:text-green-500 dark:hover:text-green-400" title="Download Invoice" onClick={() => generateInvoice(work)}>
-                        <Download size={16} />
+                      <Button variant="ghost" size="icon" className="text-gray-400 hover:text-green-500 dark:hover:text-green-400" title="Download Invoice" onClick={() => generateInvoice(work, customer)}>
+                        <Download size={18} />
                       </Button>
                       <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-magenta dark:hover:text-yaron-magenta" title="Edit Work" onClick={() => { setSelectedWork(work); navigate('#new-work'); }}>
                         <Edit2 size={16} />
@@ -259,7 +277,7 @@ export default function Works() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
               {filteredWorks.length === 0 && (
                  <tr>
                    <td colSpan={7} className="py-12 text-center text-gray-500 dark:text-gray-400">

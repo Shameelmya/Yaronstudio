@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, FolderOpen, Calendar, IndianRupee, Settings, ChevronDown, Moon, Sun } from 'lucide-react';
+import { Home, FolderOpen, Calendar, IndianRupee, Settings, ChevronDown, Moon, Sun, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
 import { listenToStaff, listenToStudios } from '@/lib/api';
@@ -21,6 +21,7 @@ export const BottomNav = () => {
     { icon: FolderOpen, label: 'Works', path: '/works' },
     { icon: Calendar, label: 'Bookings', path: '/bookings' },
     { icon: IndianRupee, label: 'Finance', path: '/finance' },
+    { icon: FileText, label: 'Invoices', path: '/invoices' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
@@ -79,6 +80,7 @@ export const Sidebar = () => {
     { icon: FolderOpen, label: 'Works', path: '/works' },
     { icon: Calendar, label: 'Bookings', path: '/bookings' },
     { icon: IndianRupee, label: 'Finance', path: '/finance' },
+    { icon: FileText, label: 'Invoices', path: '/invoices' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
