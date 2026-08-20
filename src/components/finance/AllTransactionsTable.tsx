@@ -8,6 +8,9 @@ import { deleteIncome, deleteExpense } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { Search } from 'lucide-react';
+import { NewIncomeModal } from '@/components/finance/NewIncomeModal';
+import { NewExpenseModal } from '@/components/finance/NewExpenseModal';
 
 interface AllTransactionsTableProps {
   startDate: Date;
@@ -17,6 +20,12 @@ interface AllTransactionsTableProps {
 export function AllTransactionsTable({ startDate, endDate }: AllTransactionsTableProps) {
   const { works, incomes, expenses, customers, activeStudioId } = useAppStore();
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: string; id: string; title: string }>({ isOpen: false, type: '', id: '', title: '' });
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Edit State
+  const [editIncomeModalOpen, setEditIncomeModalOpen] = useState(false);
+  const [editExpenseModalOpen, setEditExpenseModalOpen] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
 
   const transactions = useMemo(() => {
     const all = [
@@ -61,8 +70,19 @@ export function AllTransactionsTable({ startDate, endDate }: AllTransactionsTabl
           original: e
         }))
     ];
-    return all.sort((a, b) => b.date - a.date);
-  }, [works, incomes, expenses, customers, startDate, endDate]);
+    
+    const sorted = all.sort((a, b) => b.date - a.date);
+    
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return sorted.filter(t => 
+        t.person.toLowerCase().includes(q) || 
+        t.description.toLowerCase().includes(q) ||
+        t.phone.toLowerCase().includes(q)
+      );
+    }
+    return sorted;
+  }, [works, incomes, expenses, customers, startDate, endDate, searchQuery]);
 
   const handleDelete = async () => {
     if (deleteModal.type === 'income') {
@@ -83,10 +103,31 @@ export function AllTransactionsTable({ startDate, endDate }: AllTransactionsTabl
     }
   };
 
+  const handleEdit = (tx: any) => {
+    setEditData(tx.original);
+    if (tx.type === 'income') {
+      setEditIncomeModalOpen(true);
+    } else if (tx.type === 'expense') {
+      setEditExpenseModalOpen(true);
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden mt-6">
-      <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+      <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h3 className="font-bold text-lg text-yaron-charcoal dark:text-white">All Transactions</h3>
+        <div className="relative w-full sm:w-64">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search transactions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-yaron-magenta/50 dark:text-white transition-all"
+          />
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -122,19 +163,28 @@ export function AllTransactionsTable({ startDate, endDate }: AllTransactionsTabl
                   <div className="flex items-center justify-end space-x-2">
                     <button 
                       onClick={() => handlePrint(tx)}
-                      className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-transform duration-100 active:scale-90"
                       title="Print"
                     >
                       <Printer size={16} />
                     </button>
                     {tx.type !== 'work' && (
-                      <button 
-                        onClick={() => setDeleteModal({ isOpen: true, type: tx.type, id: tx.id, title: tx.person })}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash size={16} />
-                      </button>
+                      <>
+                        <button 
+                          onClick={() => handleEdit(tx)}
+                          className="p-2 text-gray-400 hover:text-yaron-magenta hover:bg-yaron-magenta/10 dark:hover:bg-yaron-magenta/20 rounded-lg transition-transform duration-100 active:scale-90"
+                          title="Edit"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button 
+                          onClick={() => setDeleteModal({ isOpen: true, type: tx.type, id: tx.id, title: tx.person })}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-transform duration-100 active:scale-90"
+                          title="Delete"
+                        >
+                          <Trash size={16} />
+                        </button>
+                      </>
                     )}
                   </div>
                 </td>
@@ -170,6 +220,17 @@ export function AllTransactionsTable({ startDate, endDate }: AllTransactionsTabl
           </div>
         </div>
       </Modal>
+
+      <NewIncomeModal 
+        isOpen={editIncomeModalOpen} 
+        onClose={() => { setEditIncomeModalOpen(false); setEditData(null); }} 
+        editData={editData} 
+      />
+      <NewExpenseModal 
+        isOpen={editExpenseModalOpen} 
+        onClose={() => { setEditExpenseModalOpen(false); setEditData(null); }} 
+        editData={editData} 
+      />
     </div>
   );
 }

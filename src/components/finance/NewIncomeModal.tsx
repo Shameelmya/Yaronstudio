@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { addIncome } from '@/lib/api';
+import { addIncome, updateIncome } from '@/lib/api';
+import * as import_react from 'react';
 import { useAppStore } from '@/store/useAppStore';
 
 interface NewIncomeModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editData?: any;
 }
 
-export function NewIncomeModal({ isOpen, onClose }: NewIncomeModalProps) {
+export function NewIncomeModal({ isOpen, onClose, editData }: NewIncomeModalProps) {
   const { activeStudioId } = useAppStore();
   const [formData, setFormData] = useState({
     title: '',
@@ -19,31 +21,51 @@ export function NewIncomeModal({ isOpen, onClose }: NewIncomeModalProps) {
   });
   const [loading, setLoading] = useState(false);
 
+  import_react.useEffect(() => {
+    if (isOpen && editData) {
+      setFormData({
+        title: editData.title || '',
+        amount: editData.amount?.toString() || '',
+        description: editData.description || '',
+      });
+    } else if (isOpen) {
+      setFormData({ title: '', amount: '', description: '' });
+    }
+  }, [isOpen, editData]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeStudioId) return;
 
     try {
       setLoading(true);
-      await addIncome({
-        id: Date.now().toString(),
-        studioId: activeStudioId,
-        title: formData.title,
-        description: formData.description || undefined,
-        amount: Number(formData.amount),
-        date: Date.now(),
-      });
+      if (editData) {
+        await updateIncome(editData.id, {
+          title: formData.title,
+          description: formData.description || undefined,
+          amount: Number(formData.amount),
+        });
+      } else {
+        await addIncome({
+          id: Date.now().toString(),
+          studioId: activeStudioId,
+          title: formData.title,
+          description: formData.description || undefined,
+          amount: Number(formData.amount),
+          date: Date.now(),
+        });
+      }
       setFormData({ title: '', amount: '', description: '' });
       onClose();
     } catch (error) {
-      console.error('Failed to add income', error);
+      console.error(editData ? 'Failed to update income' : 'Failed to add income', error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add New Income">
+    <Modal isOpen={isOpen} onClose={onClose} title={editData ? "Edit Income" : "Add New Income"}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input 
           label="Income Source / Title"
@@ -70,7 +92,7 @@ export function NewIncomeModal({ isOpen, onClose }: NewIncomeModalProps) {
         <div className="pt-4 flex space-x-3">
           <Button type="button" variant="ghost" className="flex-1" onClick={onClose} disabled={loading}>Cancel</Button>
           <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 text-white border-none" disabled={loading}>
-            {loading ? 'Adding...' : 'Add Income'}
+            {loading ? 'Saving...' : (editData ? 'Save Changes' : 'Add Income')}
           </Button>
         </div>
       </form>
