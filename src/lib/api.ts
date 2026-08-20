@@ -32,6 +32,25 @@ export const deleteWork = async (workId: string) => {
   await deleteDoc(doc(db, 'works', workId));
 };
 
+export const getLatestWorkRefNumber = async (studioId: string): Promise<string> => {
+  const q = query(collection(db, 'works'));
+  const snap = await getDocs(q);
+  if (snap.empty) return 'YSR00000';
+  
+  let maxNum = 0;
+  snap.forEach(d => {
+    const ref = d.data().refNumber;
+    if (ref && ref.startsWith('YSR')) {
+      const num = parseInt(ref.replace('YSR', ''), 10);
+      if (!isNaN(num) && num > maxNum) {
+        maxNum = num;
+      }
+    }
+  });
+  
+  return `YSR${String(maxNum).padStart(5, '0')}`;
+};
+
 // ==============================
 // Customers API
 // ==============================

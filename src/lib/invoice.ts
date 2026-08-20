@@ -82,7 +82,7 @@ export const generateInvoice = async (work: any, customer: any) => {
   const doc = new jsPDF();
   const primaryColor: [number, number, number] = [213, 55, 104]; // Yaron Magenta
   
-  await drawInvoiceHeader(doc, `INV-${work.id.slice(0, 8)}`, customer);
+  await drawInvoiceHeader(doc, work.refNumber || `INV-${work.id.slice(0, 8)}`, customer);
 
   // Work Title
   doc.setFont('helvetica', 'bold');

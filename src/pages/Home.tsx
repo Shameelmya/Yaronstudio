@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency } from '@/lib/utils';
-import { Plus, Clock, TrendingUp, Music, CheckCircle2, IndianRupee, Phone, CalendarHeart } from 'lucide-react';
+import { Plus, Clock, TrendingUp, Music, CheckCircle2, IndianRupee, Phone, CalendarHeart, MessageCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { useAppStore } from '@/store/useAppStore';
-import { listenToWorks, listenToBookings, updateBookingStatus, listenToCustomers, updateWork } from '@/lib/api';
+import { listenToBookings, updateWork, updateBookingStatus } from '@/lib/api';
 import { format, startOfDay, differenceInDays } from 'date-fns';
 import { UserCheck } from 'lucide-react';
 import { QuickAttendanceModal } from '@/components/home/QuickAttendanceModal';
 import { QuickTransactionModal } from '@/components/finance/QuickTransactionModal';
 import { ReceivePayModal } from '@/components/finance/ReceivePayModal';
+import { GlobalSearchModal } from '@/components/home/GlobalSearchModal';
+import { Search } from 'lucide-react';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -19,84 +21,19 @@ export default function Home() {
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
   const [selectedReceivePayWork, setSelectedReceivePayWork] = useState<any>(null);
 
-  const [pendingWorks, setPendingWorks] = useState<any[]>([]);
-  const [recentWorks, setRecentWorks] = useState<any[]>([]);
   const [todayBookings, setTodayBookings] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
   
-  const [totalPendingPayments, setTotalPendingPayments] = useState(0);
-  const [totalIncome, setTotalIncome] = useState(0);
-  const [activeWorksCount, setActiveWorksCount] = useState(0);
-  const [overdueCount, setOverdueCount] = useState(0);
   const [isTotalIncomeOpen, setIsTotalIncomeOpen] = useState(false);
   const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false);
-  const [incomes, setIncomes] = useState<any[]>([]);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   
   const location = useLocation();
   const isQuickAttendanceOpen = location.hash === '#attendance';
   
-  const { activeStudioId } = useAppStore();
+  const { activeStudioId, works, customers, incomes } = useAppStore();
   
   useEffect(() => {
     if (!activeStudioId) return;
-
-    const unsubCustomers = listenToCustomers(activeStudioId, (data) => {
-      setCustomers(data);
-    });
-    
-    import('@/lib/api').then(({ listenToIncomes }) => {
-      listenToIncomes(activeStudioId, (data: any[]) => {
-        setIncomes(data);
-      });
-    });
-    
-    const unsubWorks = listenToWorks(activeStudioId, (works) => {
-      const today = startOfDay(new Date());
-      
-      const pendingList = works
-        .filter(w => w.status !== 'cancelled' && (w.totalAmount - (w.paidAmount || 0)) > 0)
-        .map(w => ({
-          ...w,
-          pending: w.totalAmount - (w.paidAmount || 0),
-          daysDue: w.dueDate ? differenceInDays(today, startOfDay(w.dueDate)) : 0
-        }));
-        
-      setPendingWorks(pendingList);
-      
-      const recent = works.slice(0, 4).map(w => ({
-        ...w,
-        pending: w.totalAmount - (w.paidAmount || 0)
-      }));
-      setRecentWorks(recent);
-
-      let pending = 0;
-      let income = 0;
-      let active = 0;
-      let overdue = 0;
-
-      works.forEach(w => {
-        const amtPending = w.totalAmount - (w.paidAmount || 0);
-        if (amtPending > 0 && w.status !== 'cancelled') pending += amtPending;
-        if (w.status === 'pending' || w.status === 'in_progress') active++;
-        
-        income += (w.paidAmount || 0);
-        
-        if (w.dueDate && (amtPending > 0 || w.status !== 'completed')) {
-          const daysDue = differenceInDays(today, startOfDay(w.dueDate));
-          if (daysDue > 0) overdue++;
-        }
-      });
-
-      setTotalPendingPayments(pending);
-      setActiveWorksCount(active);
-      setOverdueCount(overdue);
-      
-      // Calculate total income asynchronously combining works and incomes
-      setTimeout(() => {
-        setTotalIncome(income + incomes.reduce((acc, curr) => acc + curr.amount, 0));
-      }, 500);
-    });
-    
     const unsubBookings = listenToBookings(activeStudioId, (bookings) => {
       const todayString = format(new Date(), 'yyyy-MM-dd');
       const todaySessions = bookings
@@ -106,9 +43,56 @@ export default function Home() {
         }));
       setTodayBookings(todaySessions);
     });
-
-    return () => { unsubWorks(); unsubBookings(); unsubCustomers(); };
+    return () => unsubBookings();
   }, [activeStudioId]);
+
+  const { pendingWorks, recentWorks, totalPendingPayments, activeWorksCount, overdueCount, totalIncome } = useMemo(() => {
+    const today = startOfDay(new Date());
+    
+    let pendingAmt = 0;
+    let incomeAmt = 0;
+    let activeCnt = 0;
+    let overdueCnt = 0;
+
+    const pendingList = works
+      .filter(w => w.status !== 'cancelled' && (w.totalAmount - (w.paidAmount || 0)) > 0)
+      .map(w => ({
+        ...w,
+        pending: w.totalAmount - (w.paidAmount || 0),
+        daysDue: w.dueDate ? differenceInDays(today, startOfDay(w.dueDate)) : 0
+      }));
+
+    const recentList = works.slice(0, 4).map(w => ({
+      ...w,
+      pending: w.totalAmount - (w.paidAmount || 0)
+    }));
+
+    works.forEach(w => {
+      const amtPending = w.totalAmount - (w.paidAmount || 0);
+      if (amtPending > 0 && w.status !== 'cancelled') pendingAmt += amtPending;
+      if (w.status === 'pending' || w.status === 'in_progress') activeCnt++;
+      
+      incomeAmt += (w.paidAmount || 0);
+      
+      if (w.dueDate && (amtPending > 0 || w.status !== 'completed')) {
+        const daysDue = differenceInDays(today, startOfDay(w.dueDate));
+        if (daysDue > 0) overdueCnt++;
+      }
+    });
+    
+    incomes.forEach(i => {
+      incomeAmt += i.amount;
+    });
+
+    return {
+      pendingWorks: pendingList,
+      recentWorks: recentList,
+      totalPendingPayments: pendingAmt,
+      activeWorksCount: activeCnt,
+      overdueCount: overdueCnt,
+      totalIncome: incomeAmt
+    };
+  }, [works, incomes]);
 
   const handleTogglePaid = async (workId: string, totalAmount: number) => {
     try {
@@ -156,7 +140,17 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 hide-scrollbar">
+      <div className="mb-6">
+        <div 
+          onClick={() => setIsGlobalSearchOpen(true)}
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center text-gray-500 cursor-text shadow-sm hover:shadow-md transition-shadow"
+        >
+          <Search size={20} className="mr-3 text-yaron-magenta" />
+          <span className="text-sm">Search customers, works, phone numbers, or YSR...</span>
+        </div>
+      </div>
+
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 hide-scrollbar">
         <Card 
           className="bg-yaron-magenta border-none shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md transition-all min-w-[160px] flex-1 shrink-0 snap-center p-4 group"
           onClick={() => setIsPendingModalOpen(true)}
@@ -315,7 +309,7 @@ export default function Home() {
                       className="inline-flex justify-center items-center w-12 h-10 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
                       title="WhatsApp"
                     >
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-6 h-6 brightness-0 invert" />
+                      <MessageCircle size={18} className="text-white fill-current" />
                     </a>
                   )}
                   {customer?.phone && (
@@ -381,7 +375,7 @@ export default function Home() {
                       className="inline-flex justify-center items-center w-12 h-10 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
                       title="WhatsApp"
                     >
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-6 h-6 brightness-0 invert" />
+                      <MessageCircle size={18} className="text-white fill-current" />
                     </a>
                   )}
                   {customer?.phone && (
@@ -427,6 +421,11 @@ export default function Home() {
         isOpen={!!selectedReceivePayWork}
         onClose={() => setSelectedReceivePayWork(null)}
         work={selectedReceivePayWork}
+      />
+      
+      <GlobalSearchModal 
+        isOpen={isGlobalSearchOpen} 
+        onClose={() => setIsGlobalSearchOpen(false)} 
       />
     </div>
   );

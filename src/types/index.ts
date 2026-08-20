@@ -22,6 +22,7 @@ export type PaymentStatus = 'paid' | 'pending';
 
 export interface Work {
   id: string;
+  refNumber?: string;
   studioId: string;
   customerId: string;
   title: string;

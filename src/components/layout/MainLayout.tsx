@@ -4,6 +4,7 @@ import { Home, FolderOpen, Calendar, IndianRupee, Settings, ChevronDown, Moon, S
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
 import { listenToStaff, listenToStudios } from '@/lib/api';
+import GlobalDataProvider from '@/components/GlobalDataProvider';
 
 const getGreeting = (adminName: string) => {
   const hour = new Date().getHours();
@@ -197,17 +198,19 @@ export default function MainLayout() {
   }, [activeStudioId, setStaff]);
 
   return (
-    <div className={cn("min-h-screen flex transition-colors", "bg-yaron-light dark:bg-gray-950 dark:text-white")}>
-      <Sidebar />
-      <div className="flex-1 flex flex-col sm:ml-64 w-full max-w-full pb-[110px] sm:pb-0 relative min-h-screen">
-        <Header />
-        <main className="flex-1 overflow-x-hidden p-4 sm:p-8">
-          <div className="max-w-6xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
-        <BottomNav />
+    <GlobalDataProvider>
+      <div className={cn("min-h-screen flex transition-colors", "bg-yaron-light dark:bg-gray-950 dark:text-white")}>
+        <Sidebar />
+        <div className="flex-1 flex flex-col sm:ml-64 w-full max-w-full pb-[110px] sm:pb-0 relative min-h-screen">
+          <Header />
+          <main className="flex-1 overflow-x-hidden p-4 sm:p-8">
+            <div className="max-w-6xl mx-auto">
+              <Outlet />
+            </div>
+          </main>
+          <BottomNav />
+        </div>
       </div>
-    </div>
+    </GlobalDataProvider>
   );
 }

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { updateWork, listenToWorks, deleteWork, listenToCustomers } from '@/lib/api';
+import { updateWork, deleteWork, listenToCustomers } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Plus, Search, Phone, Edit2, Trash2, AlertTriangle, Filter, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Phone, Search, FileText, Calendar as CalendarIcon, CheckCircle2, Download, MessageCircle, Filter, AlertTriangle } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { generateInvoice } from '@/lib/invoice';
 import { NewWorkModal } from '@/components/works/NewWorkModal';
@@ -22,9 +22,8 @@ export default function Works() {
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWork, setSelectedWork] = useState<any>(null);
-  const [works, setWorks] = useState<any[]>([]);
+  const { activeStudioId, works } = useAppStore();
   const [customers, setCustomers] = useState<any[]>([]);
-  const { activeStudioId } = useAppStore();
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [workToDelete, setWorkToDelete] = useState<{id: string, title: string} | null>(null);
@@ -39,11 +38,7 @@ export default function Works() {
       setCustomers(fetchedCustomers);
     });
     
-    const unsubscribe = listenToWorks(activeStudioId, (fetchedWorks) => {
-      setWorks(fetchedWorks);
-    });
-    
-    return () => { unsubscribe(); unsubCustomers(); };
+    return () => { unsubCustomers(); };
   }, [activeStudioId]);
   
   const getCustomer = (id: string) => customers.find(c => c.id === id);
@@ -244,7 +239,7 @@ export default function Works() {
                       )}
                       {customer?.whatsapp && (
                         <a href={`https://wa.me/${customer.whatsapp.replace(/\D/g, '')}?text=${getWhatsAppMessage(work, customer)}`} target="_blank" rel="noreferrer" className="text-xs text-green-600 dark:text-green-400 font-semibold hover:underline flex items-center">
-                          <Phone size={12} className="mr-1" /> WhatsApp
+                          <MessageCircle size={12} className="mr-1" /> WhatsApp
                         </a>
                       )}
                     </div>
@@ -268,7 +263,7 @@ export default function Works() {
                       <Button variant="ghost" size="icon" className="text-gray-400 hover:text-green-500 dark:hover:text-green-400" title="Download Invoice" onClick={() => generateInvoice(work, customer)}>
                         <Download size={18} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-magenta dark:hover:text-yaron-magenta" title="Edit Work" onClick={() => { setSelectedWork(work); navigate('#new-work'); }}>
+                      <Button variant="ghost" size="icon" className="text-gray-400 hover:text-yaron-magenta dark:hover:text-yaron-magenta" title="Edit Work" onClick={() => { setSelectedWork({ ...work, customerObj: customer }); navigate('#new-work'); }}>
                         <Edit2 size={16} />
                       </Button>
                       <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500 dark:hover:text-red-400" title="Delete Work" onClick={() => { setWorkToDelete({ id: work.id, title: work.title }); setDeleteModalOpen(true); }}>

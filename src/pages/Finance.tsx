@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button';
 import { IndianRupee, TrendingUp, TrendingDown, FileText, Download, Plus, Filter, Music, Video, Headphones, Mic } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { listenToWorks, listenToExpenses, listenToIncomes } from '@/lib/api';
 import { useAppStore } from '@/store/useAppStore';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { NewExpenseModal } from '@/components/finance/NewExpenseModal';
@@ -14,34 +13,12 @@ type TimeFilter = 'Today' | 'This Week' | 'This Month' | 'This Year' | 'All Time
 
 export default function Finance() {
   const [activeTab, setActiveTab] = useState<'overview' | 'analysis' | 'invoices'>('overview');
+  const { activeStudioId, works, expenses, incomes } = useAppStore();
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('All');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('This Month');
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  
-  const { activeStudioId } = useAppStore();
-  const [works, setWorks] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
-  const [incomes, setIncomes] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (!activeStudioId) return;
-    
-    const unsubWorks = listenToWorks(activeStudioId, (fetchedWorks) => {
-      setWorks(fetchedWorks);
-    });
-
-    const unsubExpenses = listenToExpenses(activeStudioId, (fetchedExpenses) => {
-      setExpenses(fetchedExpenses);
-    });
-    
-    const unsubIncomes = listenToIncomes(activeStudioId, (fetchedIncomes: any[]) => {
-      setIncomes(fetchedIncomes);
-    });
-
-    return () => { unsubWorks(); unsubExpenses(); unsubIncomes(); };
-  }, [activeStudioId]);
 
   // Calculations based on time filter
   const today = new Date();
@@ -64,14 +41,14 @@ export default function Finance() {
 
   const netIncome = useMemo(() => {
     const worksIncome = works.reduce((sum, w) => {
-      if (w.createdAt && isWithinInterval(w.createdAt instanceof Date ? w.createdAt : new Date(w.createdAt), { start: startDate, end: endDate })) {
+      if (w.createdAt && isWithinInterval(new Date(w.createdAt as any), { start: startDate, end: endDate })) {
         return sum + (w.paidAmount || 0);
       }
       return sum;
     }, 0);
     
     const miscIncome = incomes.reduce((sum, i) => {
-      if (i.date && isWithinInterval(i.date instanceof Date ? i.date : new Date(i.date), { start: startDate, end: endDate })) {
+      if (i.date && isWithinInterval(new Date(i.date), { start: startDate, end: endDate })) {
         return sum + i.amount;
       }
       return sum;
@@ -82,7 +59,7 @@ export default function Finance() {
 
   const totalExpenses = useMemo(() => {
     return expenses.reduce((sum, e) => {
-      if (e.date && isWithinInterval(e.date instanceof Date ? e.date : new Date(e.date), { start: startDate, end: endDate })) {
+      if (e.date && isWithinInterval(new Date(e.date), { start: startDate, end: endDate })) {
         return sum + e.amount;
       }
       return sum;
@@ -105,14 +82,14 @@ export default function Finance() {
       const monthEnd = endOfMonth(subMonths(today, i));
       
       const monthIncome = works.reduce((sum, w) => {
-        if (w.createdAt && isWithinInterval(w.createdAt, { start: monthStart, end: monthEnd })) {
+        if (w.createdAt && isWithinInterval(new Date(w.createdAt as any), { start: monthStart, end: monthEnd })) {
           return sum + (w.paidAmount || 0);
         }
         return sum;
       }, 0);
 
       const monthExpense = expenses.reduce((sum, e) => {
-        if (e.date && isWithinInterval(e.date, { start: monthStart, end: monthEnd })) {
+        if (e.date && isWithinInterval(new Date(e.date), { start: monthStart, end: monthEnd })) {
           return sum + e.amount;
         }
         return sum;

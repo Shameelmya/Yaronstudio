@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createWork, createCustomer, updateWork, getCustomerByPhone } from '@/lib/api';
+import { createWork, createCustomer, updateWork, getCustomerByPhone, getLatestWorkRefNumber } from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -54,20 +54,22 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
 
   useEffect(() => {
     if (initialData && isOpen) {
-      setExistingCustomer({
-        name: initialData.customer,
-        phone: initialData.phone,
-      });
+      setExistingCustomer(initialData.customerObj || null);
+      
+      const workDate = initialData.dueDate instanceof Date 
+        ? initialData.dueDate.toISOString().split('T')[0] 
+        : (initialData.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '');
+
       reset({
-        phone: initialData.phone,
-        name: initialData.customer,
-        workTitle: initialData.title,
-        dueDate: initialData.due,
-        services: initialData.services,
-        totalAmount: initialData.total,
-        paidAmount: initialData.pending ? initialData.total - initialData.pending : initialData.total,
-        place: '',
-        whatsapp: initialData.phone
+        phone: initialData.customerObj?.phone || '',
+        name: initialData.customerObj?.name || initialData.customerId || '',
+        workTitle: initialData.title || '',
+        dueDate: workDate,
+        services: initialData.services || [],
+        totalAmount: initialData.totalAmount || '',
+        paidAmount: initialData.paidAmount || 0,
+        place: initialData.customerObj?.place || '',
+        whatsapp: initialData.customerObj?.whatsapp || initialData.customerObj?.phone || ''
       });
     } else if (isOpen) {
       reset({
@@ -97,6 +99,8 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
       const studioId = useAppStore.getState().activeStudioId;
       if (!studioId) throw new Error("No active studio selected");
 
+      const fallbackWhatsapp = data.whatsapp || data.phone;
+      
       let customerId = existingCustomer?.id;
 
       if (!existingCustomer) {
@@ -106,10 +110,12 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
           name: data.name,
           phone: data.phone,
           place: data.place || '',
-          whatsapp: data.whatsapp || data.phone,
+          whatsapp: fallbackWhatsapp,
           studioId,
           createdAt: new Date(),
         });
+      } else if (!existingCustomer.whatsapp && fallbackWhatsapp) {
+         // optionally update existing customer if whatsapp was empty
       }
 
       if (initialData) {
@@ -121,8 +127,13 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
           paidAmount: Number(data.paidAmount) || 0,
         });
       } else {
+        const latestRef = await getLatestWorkRefNumber(studioId);
+        const nextNum = parseInt(latestRef.replace('YSR', ''), 10) + 1;
+        const nextRef = `YSR${String(nextNum).padStart(5, '0')}`;
+        
         await createWork({
           id: Date.now().toString(),
+          refNumber: nextRef,
           title: data.workTitle,
           customerId: customerId,
           studioId,

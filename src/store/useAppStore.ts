@@ -1,11 +1,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Studio, Staff } from '../types';
+import { Studio, Staff, Work, Customer, Expense } from '../types';
 
 interface AppState {
   theme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
+  
+  works: Work[];
+  setWorks: (works: Work[]) => void;
+  customers: Customer[];
+  setCustomers: (customers: Customer[]) => void;
+  expenses: Expense[];
+  setExpenses: (expenses: Expense[]) => void;
+  incomes: any[];
+  setIncomes: (incomes: any[]) => void;
   
   studios: Studio[];
   setStudios: (studios: Studio[]) => void;
@@ -31,6 +40,15 @@ export const useAppStore = create<AppState>()(
       theme: 'light',
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
+      
+      works: [],
+      setWorks: (works) => set({ works }),
+      customers: [],
+      setCustomers: (customers) => set({ customers }),
+      expenses: [],
+      setExpenses: (expenses) => set({ expenses }),
+      incomes: [],
+      setIncomes: (incomes) => set({ incomes }),
       
       studios: [],
       setStudios: (studios) => set((state) => {
