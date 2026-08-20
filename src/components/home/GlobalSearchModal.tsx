@@ -18,25 +18,19 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const { works, customers } = useAppStore();
 
   const getWhatsAppMessage = (work: any, customer: any) => {
-    const today = startOfDay(new Date());
     let dateText = 'is pending';
     if (work.dueDate) {
-      const daysDue = differenceInDays(today, startOfDay(work.dueDate));
-      if (daysDue > 0) dateText = `was due ${daysDue} days ago`;
-      else if (daysDue === 0) dateText = 'is due today';
-      else dateText = `is due in ${Math.abs(daysDue)} days`;
+      const daysDue = differenceInDays(startOfDay(new Date()), startOfDay(work.dueDate));
+      if (daysDue > 0) dateText = `is pending from ${format(new Date(work.dueDate), 'dd MMM yyyy')}`;
+      else dateText = `is due on ${format(new Date(work.dueDate), 'dd MMM yyyy')}`;
     }
 
-    return encodeURIComponent(
-      `Hi ${customer?.name || 'Customer'},\n\n` +
-      `This is a gentle reminder that your payment of ${formatCurrency(work.totalAmount - (work.paidAmount || 0))} ` +
-      `for *${work.title}* ${dateText}.\n\n` +
-      `Please clear the dues. Thank you!\n\n` +
-      `*Quick link to pay:*\n` +
-      `Gpay number : 8593813313\n` +
-      `GPay Name : Shibili Moonnakkal\n` +
-      `UPI ID : shibilimoonakal-1@oksbi`
-    );
+    const pendingAmt = work.totalAmount - (work.paidAmount || 0);
+    const note = `Payment for ${work.title}`;
+    const upiLink = `upi://pay?pa=shibilimoonakal-1@oksbi&pn=Shibili%20Moonnakkal&am=${pendingAmt}&cu=INR&tn=${note}`;
+
+    const msg = `Hi ${customer?.name || ''}, this is a gentle reminder that your payment of Rs. ${pendingAmt} for ${work.title} ${dateText}. Please clear the dues 🙏\n\n💸 *Quick link to pay*: \n${upiLink}\n\n📱 *Gpay number* : 8593813313\n👤 *GPay Name* : Shibili Moonnakkal\n\nThank you!`;
+    return encodeURIComponent(msg);
   };
 
   const results = useMemo(() => {
@@ -61,7 +55,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
     <Modal isOpen={isOpen} onClose={onClose} title="Global Search">
       <div className="p-1 mb-4">
         <Input
-          placeholder="Search by Customer Name, Phone, or Work Title/Reference..."
+          placeholder="Search here..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           icon={<Search size={18} className="text-gray-400" />}

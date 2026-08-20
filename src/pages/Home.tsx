@@ -106,17 +106,17 @@ export default function Home() {
   const getCustomer = (id: string) => customers.find(c => c.id === id);
 
   const getWhatsAppMessage = (work: any, customer: any) => {
-    const today = startOfDay(new Date());
     let dateText = 'is pending';
     if (work.dueDate) {
-      const daysDue = differenceInDays(today, startOfDay(work.dueDate));
+      const daysDue = differenceInDays(startOfDay(new Date()), startOfDay(work.dueDate));
       if (daysDue > 0) dateText = `is pending from ${format(new Date(work.dueDate), 'dd MMM yyyy')}`;
       else dateText = `is due on ${format(new Date(work.dueDate), 'dd MMM yyyy')}`;
     }
-    const pending = work.totalAmount - (work.paidAmount || 0);
-    const upiLink = `upi://pay?pa=shibilimoonakal-1@oksbi&pn=Shibili%20Moonnakkal&am=${pending}&cu=INR`;
-    
-    const msg = `Hi ${customer?.name || ''}, this is a gentle reminder that your payment of Rs. ${pending} for ${work.title} ${dateText}. Please clear the dues 🙏\n\n💸 *Quick link to pay*: ${upiLink}\n\n📱 *Gpay number* : 8593813313\n👤 *GPay Name* : Shibili Moonnakkal\n\nThank you!`;
+    const pendingAmt = work.totalAmount - (work.paidAmount || 0);
+    const note = `Payment for ${work.title}`;
+    const upiLink = `upi://pay?pa=shibilimoonakal-1@oksbi&pn=Shibili%20Moonnakkal&am=${pendingAmt}&cu=INR&tn=${note}`;
+
+    const msg = `Hi ${customer?.name || ''}, this is a gentle reminder that your payment of Rs. ${pendingAmt} for ${work.title} ${dateText}. Please clear the dues 🙏\n\n💸 *Quick link to pay*: \n${upiLink}\n\n📱 *Gpay number* : 8593813313\n👤 *GPay Name* : Shibili Moonnakkal\n\nThank you!`;
     return encodeURIComponent(msg);
   };
 
@@ -146,7 +146,7 @@ export default function Home() {
           className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center text-gray-500 cursor-text shadow-sm hover:shadow-md transition-shadow"
         >
           <Search size={20} className="mr-3 text-yaron-magenta" />
-          <span className="text-sm">Search customers, works, phone numbers, or YSR...</span>
+          <span className="text-sm">Search here...</span>
         </div>
       </div>
 

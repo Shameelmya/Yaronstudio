@@ -44,11 +44,17 @@ export default function Works() {
   const getCustomer = (id: string) => customers.find(c => c.id === id);
 
   const getWhatsAppMessage = (work: any, customer: any) => {
-    const today = startOfDay(new Date());
-    const daysDue = work.dueDate ? differenceInDays(today, startOfDay(work.dueDate)) : 0;
-    const daysText = daysDue > 0 ? `has been pending for ${daysDue} days` : `is due soon`;
-    const pending = work.totalAmount - (work.paidAmount || 0);
-    const msg = `Hi ${customer?.name || ''}, this is a gentle reminder that your payment of Rs. ${pending} for ${work.title} ${daysText}. Please clear the dues. Thank you!`;
+    let dateText = 'is pending';
+    if (work.dueDate) {
+      const daysDue = differenceInDays(startOfDay(new Date()), startOfDay(work.dueDate));
+      if (daysDue > 0) dateText = `is pending from ${format(new Date(work.dueDate), 'dd MMM yyyy')}`;
+      else dateText = `is due on ${format(new Date(work.dueDate), 'dd MMM yyyy')}`;
+    }
+    const pendingAmt = work.totalAmount - (work.paidAmount || 0);
+    const note = `Payment for ${work.title}`;
+    const upiLink = `upi://pay?pa=shibilimoonakal-1@oksbi&pn=Shibili%20Moonnakkal&am=${pendingAmt}&cu=INR&tn=${note}`;
+    
+    const msg = `Hi ${customer?.name || ''}, this is a gentle reminder that your payment of Rs. ${pendingAmt} for ${work.title} ${dateText}. Please clear the dues 🙏\n\n💸 *Quick link to pay*: \n${upiLink}\n\n📱 *Gpay number* : 8593813313\n👤 *GPay Name* : Shibili Moonnakkal\n\nThank you!`;
     return encodeURIComponent(msg);
   };
 
