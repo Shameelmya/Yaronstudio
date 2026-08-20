@@ -6,15 +6,19 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { listenToWorks, listenToExpenses, listenToIncomes } from '@/lib/api';
 import { useAppStore } from '@/store/useAppStore';
-import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { NewExpenseModal } from '@/components/finance/NewExpenseModal';
 import { NewIncomeModal } from '@/components/finance/NewIncomeModal';
+
+type TimeFilter = 'Today' | 'This Week' | 'This Month' | 'This Year' | 'All Time';
 
 export default function Finance() {
   const [activeTab, setActiveTab] = useState<'overview' | 'analysis' | 'invoices'>('overview');
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('All');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('This Month');
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   
   const { activeStudioId } = useAppStore();
   const [works, setWorks] = useState<any[]>([]);
@@ -39,37 +43,51 @@ export default function Finance() {
     return () => { unsubWorks(); unsubExpenses(); unsubIncomes(); };
   }, [activeStudioId]);
 
-  // Calculations for current month
+  // Calculations based on time filter
   const today = new Date();
-  const currentMonthStart = startOfMonth(today);
-  const currentMonthEnd = endOfMonth(today);
+  
+  const { startDate, endDate } = useMemo(() => {
+    switch (timeFilter) {
+      case 'Today':
+        return { startDate: startOfDay(today), endDate: endOfDay(today) };
+      case 'This Week':
+        return { startDate: startOfWeek(today), endDate: endOfWeek(today) };
+      case 'This Month':
+        return { startDate: startOfMonth(today), endDate: endOfMonth(today) };
+      case 'This Year':
+        return { startDate: startOfYear(today), endDate: endOfYear(today) };
+      case 'All Time':
+      default:
+        return { startDate: new Date(2000, 0, 1), endDate: new Date(2100, 0, 1) };
+    }
+  }, [timeFilter]);
 
   const netIncome = useMemo(() => {
     const worksIncome = works.reduce((sum, w) => {
-      if (w.createdAt && isWithinInterval(w.createdAt, { start: currentMonthStart, end: currentMonthEnd })) {
+      if (w.createdAt && isWithinInterval(w.createdAt instanceof Date ? w.createdAt : new Date(w.createdAt), { start: startDate, end: endDate })) {
         return sum + (w.paidAmount || 0);
       }
       return sum;
     }, 0);
     
     const miscIncome = incomes.reduce((sum, i) => {
-      if (i.date && isWithinInterval(i.date, { start: currentMonthStart, end: currentMonthEnd })) {
+      if (i.date && isWithinInterval(i.date instanceof Date ? i.date : new Date(i.date), { start: startDate, end: endDate })) {
         return sum + i.amount;
       }
       return sum;
     }, 0);
     
     return worksIncome + miscIncome;
-  }, [works, incomes, currentMonthStart, currentMonthEnd]);
+  }, [works, incomes, startDate, endDate]);
 
   const totalExpenses = useMemo(() => {
     return expenses.reduce((sum, e) => {
-      if (e.date && isWithinInterval(e.date, { start: currentMonthStart, end: currentMonthEnd })) {
+      if (e.date && isWithinInterval(e.date instanceof Date ? e.date : new Date(e.date), { start: startDate, end: endDate })) {
         return sum + e.amount;
       }
       return sum;
     }, 0);
-  }, [expenses, currentMonthStart, currentMonthEnd]);
+  }, [expenses, startDate, endDate]);
 
   const pendingRecovery = useMemo(() => {
     return works.reduce((sum, w) => {
@@ -156,14 +174,35 @@ export default function Finance() {
           <h1 className="text-2xl font-bold text-yaron-charcoal dark:text-white">Finance</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">Manage income, expenses, and invoices</p>
         </div>
-        <div className="flex space-x-2 w-full sm:w-auto">
-          <Button onClick={() => setIsIncomeModalOpen(true)} className="flex-1 sm:flex-none shadow-md bg-green-600 hover:bg-green-700 text-white border-none h-12 px-6 font-semibold">
-            <Plus size={18} className="mr-2" />
-            Add Income
+        <div className="flex space-x-3 w-full sm:w-auto relative">
+          <Button onClick={() => setIsFilterOpen(!isFilterOpen)} variant="outline" className="h-12 w-12 p-0 flex items-center justify-center shrink-0 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl relative">
+            <Filter size={20} className={timeFilter !== 'This Month' ? "text-yaron-magenta" : "text-gray-500 dark:text-gray-400"} />
           </Button>
-          <Button onClick={() => setIsExpenseModalOpen(true)} className="flex-1 sm:flex-none shadow-md bg-red-600 hover:bg-red-700 text-white border-none h-12 px-6 font-semibold">
-            <Plus size={18} className="mr-2" />
-            Add Expense
+          
+          {isFilterOpen && (
+            <div className="absolute right-0 top-14 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden animate-in fade-in zoom-in-95">
+              {(['Today', 'This Week', 'This Month', 'This Year', 'All Time'] as TimeFilter[]).map(filter => (
+                <button
+                  key={filter}
+                  onClick={() => { setTimeFilter(filter); setIsFilterOpen(false); }}
+                  className={cn(
+                    "w-full text-left px-4 py-3 text-sm transition-colors",
+                    timeFilter === filter 
+                      ? "bg-yaron-magenta/10 text-yaron-magenta font-semibold" 
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  )}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          <Button onClick={() => setIsIncomeModalOpen(true)} className="flex-1 sm:w-auto bg-green-600 hover:bg-green-700 text-white h-12 rounded-xl border-none shadow-md">
+            <Plus size={18} className="mr-2" /> Add Income
+          </Button>
+          <Button onClick={() => setIsExpenseModalOpen(true)} className="flex-1 sm:w-auto bg-red-600 hover:bg-red-700 text-white h-12 rounded-xl border-none shadow-md">
+            <Plus size={18} className="mr-2" /> Add Expense
           </Button>
         </div>
       </div>
@@ -196,26 +235,26 @@ export default function Finance() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-             <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-900/10 border-none shadow-sm relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all"></div>
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="w-10 h-10 rounded-full bg-white dark:bg-green-900/50 flex items-center justify-center shadow-sm">
+             <Card className="bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900 p-6 relative overflow-hidden">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-500/10 rounded-full blur-2xl"></div>
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
                   <TrendingUp className="text-green-600 dark:text-green-400" size={20} />
                 </div>
-                <span className="text-green-900 dark:text-green-300 font-medium">Net Income (Month)</span>
+                <h3 className="font-medium text-green-800 dark:text-green-300">Net Income ({timeFilter})</h3>
               </div>
-              <p className="text-3xl font-bold text-green-950 dark:text-green-400 mt-4">{formatCurrency(netIncome - totalExpenses)}</p>
+              <p className="text-4xl font-bold text-yaron-charcoal dark:text-white">{formatCurrency(netIncome)}</p>
             </Card>
 
-            <Card className="bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-900/10 border-none shadow-sm relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-500/10 rounded-full blur-2xl group-hover:bg-red-500/20 transition-all"></div>
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="w-10 h-10 rounded-full bg-white dark:bg-red-900/50 flex items-center justify-center shadow-sm">
+            <Card className="bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900 p-6 relative overflow-hidden">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-500/10 rounded-full blur-2xl"></div>
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
                   <TrendingDown className="text-red-600 dark:text-red-400" size={20} />
                 </div>
-                <span className="text-red-900 dark:text-red-300 font-medium">Total Expenses (Month)</span>
+                <h3 className="font-medium text-red-800 dark:text-red-300">Total Expenses ({timeFilter})</h3>
               </div>
-              <p className="text-3xl font-bold text-red-950 dark:text-red-400 mt-4">{formatCurrency(totalExpenses)}</p>
+              <p className="text-4xl font-bold text-yaron-charcoal dark:text-white">{formatCurrency(totalExpenses)}</p>
             </Card>
 
             <Card className="bg-gradient-to-br from-yaron-magenta/5 to-yaron-purple/5 dark:from-yaron-magenta/10 dark:to-yaron-purple/10 border-none shadow-sm relative overflow-hidden group">

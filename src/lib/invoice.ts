@@ -12,13 +12,38 @@ const loadImage = (src: string): Promise<HTMLImageElement> => {
   });
 };
 
+const numberToWords = (num: number): string => {
+  if (num === 0) return 'Zero';
+  
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  if ((num = num.toString().replace(/[\, ]/g, '') as any) != parseFloat(num as any)) return 'Not a number';
+  let n: any = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+  if (!n) return '';
+  let str = '';
+  str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+  str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+  str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+  str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+  str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+  return str.trim() + ' Rupees Only';
+};
+
 const drawInvoiceHeader = async (doc: jsPDF, invoiceId: string, customer: any) => {
   const primaryColor: [number, number, number] = [213, 55, 104]; // Yaron Magenta
   const textColor: [number, number, number] = [51, 51, 51];
 
+  let logoImage: HTMLImageElement | null = null;
   try {
-    const logo = await loadImage('/yaron logo.png');
-    doc.addImage(logo, 'PNG', 14, 15, 40, 40); // x, y, width, height (adjust as needed for aspect ratio)
+    logoImage = await loadImage('/yaron logo.png');
+    doc.addImage(logoImage, 'PNG', 14, 15, 40, 40); // x, y, width, height (adjust as needed for aspect ratio)
+    
+    // Add watermark
+    doc.saveGraphicsState();
+    doc.setGState(new (doc as any).GState({opacity: 0.05}));
+    doc.addImage(logoImage, 'PNG', 45, 120, 120, 120);
+    doc.restoreGraphicsState();
   } catch (e) {
     console.error("Failed to load logo", e);
     // Fallback text if logo fails
@@ -43,9 +68,12 @@ const drawInvoiceHeader = async (doc: jsPDF, invoiceId: string, customer: any) =
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Bill To:', 14, 70);
+  
+  doc.setFontSize(11);
+  doc.text(`${customer?.name || 'Walk-in Customer'}`, 14, 77);
+  
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text(`Customer Name: ${customer?.name || 'Walk-in Customer'}`, 14, 77);
   if (customer?.phone) doc.text(`Phone: ${customer.phone}`, 14, 82);
   if (customer?.place) doc.text(`Place: ${customer.place}`, 14, 87);
 };
@@ -98,17 +126,32 @@ export const generateInvoice = async (work: any, customer: any) => {
   doc.setFont('helvetica', 'normal');
   doc.text(`Total Amount:`, 130, finalY);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Rs ${work.totalAmount}`, 170, finalY, { align: 'right' });
+  doc.text(`Rs ${work.totalAmount}`, 196, finalY, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
   doc.text(`Paid / Advance:`, 130, finalY + 8);
-  doc.text(`Rs ${work.paidAmount || 0}`, 170, finalY + 8, { align: 'right' });
+  doc.text(`Rs ${work.paidAmount || 0}`, 196, finalY + 8, { align: 'right' });
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.text(`Balance Due:`, 130, finalY + 20);
-  doc.text(`Rs ${Math.max(0, pendingAmount)}`, 170, finalY + 20, { align: 'right' });
+  doc.text(`Rs ${Math.max(0, pendingAmount)}`, 196, finalY + 20, { align: 'right' });
+
+  // Amount in words
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(51, 51, 51);
+  doc.text(`Amount in words:`, 14, finalY + 35);
+  doc.setFont('helvetica', 'bold');
+  doc.text(numberToWords(work.totalAmount), 14, finalY + 41);
+
+  // Signatory
+  doc.setFont('helvetica', 'bold');
+  doc.text('Shibili Moonnakkal', 196, finalY + 55, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Signatory Authority', 196, finalY + 60, { align: 'right' });
 
   // Footer
   doc.setFont('helvetica', 'italic');
@@ -177,17 +220,32 @@ export const generateCustomerMasterInvoice = async (customer: any, works: any[])
   doc.setFont('helvetica', 'normal');
   doc.text(`Grand Total:`, 130, finalY);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Rs ${grandTotal}`, 180, finalY, { align: 'right' });
+  doc.text(`Rs ${grandTotal}`, 196, finalY, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
   doc.text(`Total Paid:`, 130, finalY + 8);
-  doc.text(`Rs ${totalPaid}`, 180, finalY + 8, { align: 'right' });
+  doc.text(`Rs ${totalPaid}`, 196, finalY + 8, { align: 'right' });
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.text(`Total Balance Due:`, 130, finalY + 20);
-  doc.text(`Rs ${Math.max(0, totalBalanceDue)}`, 180, finalY + 20, { align: 'right' });
+  doc.text(`Rs ${Math.max(0, totalBalanceDue)}`, 196, finalY + 20, { align: 'right' });
+
+  // Amount in words
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(51, 51, 51);
+  doc.text(`Amount in words:`, 14, finalY + 35);
+  doc.setFont('helvetica', 'bold');
+  doc.text(numberToWords(grandTotal), 14, finalY + 41);
+
+  // Signatory
+  doc.setFont('helvetica', 'bold');
+  doc.text('Shibili Moonnakkal', 196, finalY + 55, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Signatory Authority', 196, finalY + 60, { align: 'right' });
 
   // Footer
   doc.setFont('helvetica', 'italic');

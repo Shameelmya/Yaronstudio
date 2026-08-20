@@ -19,14 +19,20 @@ export function ReceivePayModal({ isOpen, onClose, work }: ReceivePayModalProps)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = Number(payAmount);
+    const pendingAmount = work.totalAmount - (work.paidAmount || 0);
+    
     if (!amount || amount <= 0) return;
+    if (amount > pendingAmount) {
+      alert(`Amount cannot exceed the pending limit of ₹${pendingAmount}`);
+      setPayAmount(String(pendingAmount));
+      return;
+    }
 
     try {
       setLoading(true);
       const newPaidAmount = (work.paidAmount || 0) + amount;
       await updateWork(work.id, {
-        paidAmount: newPaidAmount,
-        status: newPaidAmount >= work.totalAmount ? 'completed' : work.status
+        paidAmount: newPaidAmount
       });
       setPayAmount('');
       onClose();
@@ -64,7 +70,17 @@ export function ReceivePayModal({ isOpen, onClose, work }: ReceivePayModalProps)
           placeholder="0"
           type="number"
           value={payAmount}
-          onChange={e => setPayAmount(e.target.value)}
+          onChange={e => {
+            const val = Number(e.target.value);
+            const pendingAmount = work.totalAmount - (work.paidAmount || 0);
+            if (val > pendingAmount) {
+               alert(`Amount cannot exceed the pending limit of ₹${pendingAmount}`);
+               setPayAmount(String(pendingAmount));
+            } else {
+               setPayAmount(e.target.value);
+            }
+          }}
+          max={work.totalAmount - (work.paidAmount || 0)}
           required
           autoFocus
         />

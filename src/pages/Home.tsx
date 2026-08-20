@@ -25,8 +25,12 @@ export default function Home() {
   const [customers, setCustomers] = useState<any[]>([]);
   
   const [totalPendingPayments, setTotalPendingPayments] = useState(0);
-  const [incomeThisMonth, setIncomeThisMonth] = useState(0);
+  const [totalIncome, setTotalIncome] = useState(0);
   const [activeWorksCount, setActiveWorksCount] = useState(0);
+  const [overdueCount, setOverdueCount] = useState(0);
+  const [isTotalIncomeOpen, setIsTotalIncomeOpen] = useState(false);
+  const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false);
+  const [incomes, setIncomes] = useState<any[]>([]);
   
   const location = useLocation();
   const isQuickAttendanceOpen = location.hash === '#attendance';
@@ -38,6 +42,12 @@ export default function Home() {
 
     const unsubCustomers = listenToCustomers(activeStudioId, (data) => {
       setCustomers(data);
+    });
+    
+    import('@/lib/api').then(({ listenToIncomes }) => {
+      listenToIncomes(activeStudioId, (data: any[]) => {
+        setIncomes(data);
+      });
     });
     
     const unsubWorks = listenToWorks(activeStudioId, (works) => {
@@ -62,23 +72,29 @@ export default function Home() {
       let pending = 0;
       let income = 0;
       let active = 0;
-      
-      const currentMonth = today.getMonth();
-      const currentYear = today.getFullYear();
+      let overdue = 0;
 
       works.forEach(w => {
         const amtPending = w.totalAmount - (w.paidAmount || 0);
         if (amtPending > 0 && w.status !== 'cancelled') pending += amtPending;
         if (w.status === 'pending' || w.status === 'in_progress') active++;
         
-        if (w.createdAt && w.createdAt.getMonth() === currentMonth && w.createdAt.getFullYear() === currentYear) {
-           income += (w.paidAmount || 0);
+        income += (w.paidAmount || 0);
+        
+        if (w.dueDate && (amtPending > 0 || w.status !== 'completed')) {
+          const daysDue = differenceInDays(today, startOfDay(w.dueDate));
+          if (daysDue > 0) overdue++;
         }
       });
 
       setTotalPendingPayments(pending);
       setActiveWorksCount(active);
-      setIncomeThisMonth(income);
+      setOverdueCount(overdue);
+      
+      // Calculate total income asynchronously combining works and incomes
+      setTimeout(() => {
+        setTotalIncome(income + incomes.reduce((acc, curr) => acc + curr.amount, 0));
+      }, 500);
     });
     
     const unsubBookings = listenToBookings(activeStudioId, (bookings) => {
@@ -96,7 +112,7 @@ export default function Home() {
 
   const handleTogglePaid = async (workId: string, totalAmount: number) => {
     try {
-      await updateWork(workId, { paidAmount: totalAmount, status: 'completed' });
+      await updateWork(workId, { paidAmount: totalAmount });
     } catch (e) {
       console.error(e);
       alert('Failed to mark as paid');
@@ -106,8 +122,17 @@ export default function Home() {
   const getCustomer = (id: string) => customers.find(c => c.id === id);
 
   const getWhatsAppMessage = (work: any, customer: any) => {
-    const daysText = work.daysDue > 0 ? `has been pending for ${work.daysDue} days` : `is due soon`;
-    const msg = `Hi ${customer?.name || ''}, this is a gentle reminder that your payment of Rs. ${work.pending} for ${work.title} ${daysText}. Please clear the dues. Thank you!`;
+    const today = startOfDay(new Date());
+    let dateText = 'is pending';
+    if (work.dueDate) {
+      const daysDue = differenceInDays(today, startOfDay(work.dueDate));
+      if (daysDue > 0) dateText = `is pending from ${format(new Date(work.dueDate), 'dd MMM yyyy')}`;
+      else dateText = `is due on ${format(new Date(work.dueDate), 'dd MMM yyyy')}`;
+    }
+    const pending = work.totalAmount - (work.paidAmount || 0);
+    const upiLink = `upi://pay?pa=shibilimoonakal-1@oksbi&pn=Shibili%20Moonnakkal&am=${pending}&cu=INR`;
+    
+    const msg = `Hi ${customer?.name || ''}, this is a gentle reminder that your payment of Rs. ${pending} for ${work.title} ${dateText}. Please clear the dues 🙏\n\n💸 *Quick link to pay*: ${upiLink}\n\n📱 *Gpay number* : 8593813313\n👤 *GPay Name* : Shibili Moonnakkal\n\nThank you!`;
     return encodeURIComponent(msg);
   };
 
@@ -147,15 +172,18 @@ export default function Home() {
           <p className="text-white/80 text-[10px] mt-1">{pendingWorks.length} pending works</p>
         </Card>
 
-        <Card className="bg-yaron-orange border-none shadow-sm relative overflow-hidden min-w-[160px] flex-1 shrink-0 snap-center p-4">
-           <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+        <Card 
+          className="bg-yaron-orange border-none shadow-sm relative overflow-hidden min-w-[160px] flex-1 shrink-0 snap-center p-4 cursor-pointer hover:shadow-md transition-all group"
+          onClick={() => setIsTotalIncomeOpen(true)}
+        >
+           <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
           <div className="flex items-center space-x-2 mb-2">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-sm shrink-0">
               <TrendingUp className="text-white" size={16} />
             </div>
-            <span className="text-white text-xs font-medium whitespace-nowrap">Income (Mo)</span>
+            <span className="text-white text-xs font-medium whitespace-nowrap">Total Income</span>
           </div>
-          <p className="text-2xl font-bold text-white mt-2">{formatCurrency(incomeThisMonth)}</p>
+          <p className="text-2xl font-bold text-white mt-2">{formatCurrency(totalIncome)}</p>
         </Card>
 
         <Card className="bg-yaron-purple border-none shadow-sm relative overflow-hidden min-w-[160px] flex-1 shrink-0 snap-center p-4">
@@ -164,9 +192,23 @@ export default function Home() {
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-sm shrink-0">
               <Music className="text-white" size={16} />
             </div>
-            <span className="text-white text-xs font-medium whitespace-nowrap">Active</span>
+            <span className="text-white text-xs font-medium whitespace-nowrap">Ongoing Projects</span>
           </div>
           <p className="text-2xl font-bold text-white mt-2">{activeWorksCount}</p>
+        </Card>
+        
+        <Card 
+          className="bg-red-500 border-none shadow-sm relative overflow-hidden min-w-[160px] flex-1 shrink-0 snap-center p-4 cursor-pointer hover:shadow-md transition-all group"
+          onClick={() => setIsOverdueModalOpen(true)}
+        >
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-sm shrink-0">
+              <Clock className="text-white" size={16} />
+            </div>
+            <span className="text-white text-xs font-medium whitespace-nowrap">Overdue</span>
+          </div>
+          <p className="text-2xl font-bold text-white mt-2">{overdueCount}</p>
         </Card>
       </div>
 
@@ -270,17 +312,19 @@ export default function Home() {
                       href={`https://wa.me/${customer.whatsapp.replace(/\D/g, '')}?text=${getWhatsAppMessage(work, customer)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 inline-flex justify-center items-center h-10 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                      className="inline-flex justify-center items-center w-12 h-10 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                      title="WhatsApp"
                     >
-                      <Phone size={16} className="mr-2" /> WhatsApp
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-6 h-6 brightness-0 invert" />
                     </a>
                   )}
                   {customer?.phone && (
                     <a 
                       href={`tel:${customer.phone}`}
-                      className="flex-1 inline-flex justify-center items-center h-10 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-yaron-charcoal dark:text-white rounded-lg text-sm font-semibold transition-colors"
+                      className="inline-flex justify-center items-center w-12 h-10 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-yaron-charcoal dark:text-white rounded-lg transition-colors"
+                      title="Call"
                     >
-                      <Phone size={16} className="mr-2" /> Call
+                      <Phone size={18} />
                     </a>
                   )}
                   <Button 
@@ -298,6 +342,72 @@ export default function Home() {
             <div className="text-center py-8 text-gray-500">
               <CheckCircle2 size={32} className="mx-auto mb-2 text-green-500" />
               <p>No pending payments!</p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal isOpen={isTotalIncomeOpen} onClose={() => setIsTotalIncomeOpen(false)} title="Total Income Overview">
+        <div className="p-6 bg-yaron-orange text-white rounded-2xl text-center shadow-md">
+          <p className="text-sm font-medium text-white/80 mb-2 uppercase tracking-widest">Total Revenue Generated</p>
+          <p className="text-4xl font-bold">{formatCurrency(totalIncome)}</p>
+          <p className="text-sm text-white/80 mt-4">This includes all completed work payments and recorded incomes.</p>
+        </div>
+      </Modal>
+
+      <Modal isOpen={isOverdueModalOpen} onClose={() => setIsOverdueModalOpen(false)} title="Overdue Works">
+        <div className="space-y-4">
+          {pendingWorks.filter(w => w.daysDue > 0).map(work => {
+            const customer = getCustomer(work.customerId);
+            return (
+              <div key={work.id} className="p-4 border border-red-100 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 rounded-xl">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-yaron-charcoal dark:text-white">{work.title}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{customer?.name || work.customerId}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-red-600 dark:text-red-400">{formatCurrency(work.pending)}</p>
+                    <p className="text-xs text-red-500 mt-0.5 font-medium">Overdue {work.daysDue} days</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2 mt-4 pt-3 border-t border-red-100 dark:border-red-900/50">
+                  {customer?.whatsapp && (
+                    <a 
+                      href={`https://wa.me/${customer.whatsapp.replace(/\D/g, '')}?text=${getWhatsAppMessage(work, customer)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex justify-center items-center w-12 h-10 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                      title="WhatsApp"
+                    >
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-6 h-6 brightness-0 invert" />
+                    </a>
+                  )}
+                  {customer?.phone && (
+                    <a 
+                      href={`tel:${customer.phone}`}
+                      className="inline-flex justify-center items-center w-12 h-10 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-yaron-charcoal dark:text-white rounded-lg transition-colors"
+                      title="Call"
+                    >
+                      <Phone size={18} />
+                    </a>
+                  )}
+                  <Button 
+                    variant="outline"
+                    className="flex-1 h-10 border-red-500 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    onClick={() => handleTogglePaid(work.id, work.totalAmount)}
+                  >
+                    Mark Paid
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+          {pendingWorks.filter(w => w.daysDue > 0).length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <CheckCircle2 size={32} className="mx-auto mb-2 text-green-500" />
+              <p>No overdue works!</p>
             </div>
           )}
         </div>

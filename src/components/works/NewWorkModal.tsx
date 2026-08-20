@@ -152,7 +152,7 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
 
   return (
     <Modal isOpen={isOpen} onClose={resetState} title={initialData ? "Edit Work" : "New Work"}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-20 relative">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-4">
           <Input
             label="Phone Number"
@@ -275,7 +275,7 @@ export function NewWorkModal({ isOpen, onClose, initialData }: NewWorkModalProps
         </div>
 
         {/* Pinned Bottom Button */}
-        <div className="absolute -bottom-6 -left-6 -right-6 p-4 bg-white dark:bg-yaron-dark border-t border-gray-100 dark:border-gray-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] rounded-b-3xl">
+        <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 mt-6 p-4 bg-white dark:bg-yaron-dark border-t border-gray-100 dark:border-gray-800 rounded-b-2xl">
           <Button type="submit" className="w-full h-12 text-base font-bold bg-yaron-gradient text-white border-none shadow-lg">
             {initialData ? 'Save Changes' : 'Create Work'}
           </Button>
