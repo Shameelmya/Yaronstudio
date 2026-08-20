@@ -17,14 +17,15 @@ import { Search } from 'lucide-react';
 
 export default function Home() {
   const navigate = useNavigate();
-  const [isPendingModalOpen, setIsPendingModalOpen] = useState(false);
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
   const [selectedReceivePayWork, setSelectedReceivePayWork] = useState<any>(null);
 
   const [todayBookings, setTodayBookings] = useState<any[]>([]);
   
-  const [isTotalIncomeOpen, setIsTotalIncomeOpen] = useState(false);
+  const [isPendingModalOpen, setIsPendingModalOpen] = useState(false);
   const [isOverdueModalOpen, setIsOverdueModalOpen] = useState(false);
+  const [isOngoingModalOpen, setIsOngoingModalOpen] = useState(false);
+  const [isTotalIncomeOpen, setIsTotalIncomeOpen] = useState(false);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   
   const location = useLocation();
@@ -46,7 +47,16 @@ export default function Home() {
     return () => unsubBookings();
   }, [activeStudioId]);
 
-  const { pendingWorks, recentWorks, totalPendingPayments, activeWorksCount, overdueCount, totalIncome } = useMemo(() => {
+  const { 
+    pendingWorks, 
+    overdueWorks,
+    recentWorks, 
+    totalPendingPayments, 
+    activeWorksCount, 
+    activeWorksList,
+    overdueCount, 
+    totalIncome 
+  } = useMemo(() => {
     const today = startOfDay(new Date());
     
     let pendingAmt = 0;
@@ -55,12 +65,21 @@ export default function Home() {
     let overdueCnt = 0;
 
     const pendingList = works
-      .filter(w => w.status !== 'cancelled' && (w.totalAmount - (w.paidAmount || 0)) > 0)
+      .filter(w => (w.totalAmount - (w.paidAmount || 0)) > 0 && w.status !== 'cancelled')
       .map(w => ({
         ...w,
         pending: w.totalAmount - (w.paidAmount || 0),
-        daysDue: w.dueDate ? differenceInDays(today, startOfDay(w.dueDate)) : 0
+        daysDue: w.dueDate ? differenceInDays(today, startOfDay(new Date(w.dueDate))) : 0
       }));
+
+    const overdueList = works
+      .filter(w => w.dueDate && w.status !== 'cancelled' && (w.totalAmount - (w.paidAmount || 0) > 0 || w.status !== 'completed'))
+      .map(w => ({
+        ...w,
+        pending: w.totalAmount - (w.paidAmount || 0),
+        daysDue: w.dueDate ? differenceInDays(today, startOfDay(new Date(w.dueDate))) : 0
+      }))
+      .filter(w => w.daysDue > 0);
 
     const recentList = works.slice(0, 4).map(w => ({
       ...w,
@@ -74,8 +93,8 @@ export default function Home() {
       
       incomeAmt += (w.paidAmount || 0);
       
-      if (w.dueDate && (amtPending > 0 || w.status !== 'completed')) {
-        const daysDue = differenceInDays(today, startOfDay(w.dueDate));
+      if (w.dueDate && (amtPending > 0 || w.status !== 'completed') && w.status !== 'cancelled') {
+        const daysDue = differenceInDays(today, startOfDay(new Date(w.dueDate)));
         if (daysDue > 0) overdueCnt++;
       }
     });
@@ -86,9 +105,11 @@ export default function Home() {
 
     return {
       pendingWorks: pendingList,
+      overdueWorks: overdueList,
       recentWorks: recentList,
       totalPendingPayments: pendingAmt,
       activeWorksCount: activeCnt,
+      activeWorksList: works.filter(w => (w.status === 'pending' || w.status === 'in_progress')),
       overdueCount: overdueCnt,
       totalIncome: incomeAmt
     };
@@ -180,8 +201,11 @@ export default function Home() {
           <p className="text-2xl font-bold text-white mt-2">{formatCurrency(totalIncome)}</p>
         </Card>
 
-        <Card className="bg-yaron-purple border-none shadow-sm relative overflow-hidden min-w-[160px] flex-1 shrink-0 snap-center p-4">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+        <Card 
+          className="bg-yaron-purple border-none shadow-sm relative overflow-hidden min-w-[160px] flex-1 shrink-0 snap-center p-4 cursor-pointer hover:shadow-md transition-all group"
+          onClick={() => setIsOngoingModalOpen(true)}
+        >
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
           <div className="flex items-center space-x-2 mb-2">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-sm shrink-0">
               <Music className="text-white" size={16} />
@@ -351,7 +375,7 @@ export default function Home() {
 
       <Modal isOpen={isOverdueModalOpen} onClose={() => setIsOverdueModalOpen(false)} title="Overdue Works">
         <div className="space-y-4">
-          {pendingWorks.filter(w => w.daysDue > 0).map(work => {
+          {overdueWorks.map(work => {
             const customer = getCustomer(work.customerId);
             return (
               <div key={work.id} className="p-4 border border-red-100 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 rounded-xl">
@@ -398,10 +422,39 @@ export default function Home() {
               </div>
             );
           })}
-          {pendingWorks.filter(w => w.daysDue > 0).length === 0 && (
+          {overdueWorks.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <CheckCircle2 size={32} className="mx-auto mb-2 text-green-500" />
               <p>No overdue works!</p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal isOpen={isOngoingModalOpen} onClose={() => setIsOngoingModalOpen(false)} title="Ongoing Projects">
+        <div className="space-y-4">
+          {activeWorksList.map(work => {
+            const customer = getCustomer(work.customerId);
+            return (
+              <div key={work.id} className="p-4 border border-purple-100 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-900/10 rounded-xl cursor-pointer hover:shadow-md transition-all" onClick={() => navigate(`/works#${work.id}`)}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-yaron-charcoal dark:text-white">{work.title}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{customer?.name || work.customerId}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block px-2 py-1 bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 text-[10px] font-bold rounded uppercase tracking-wider">
+                      {work.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {activeWorksList.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <CheckCircle2 size={32} className="mx-auto mb-2 text-purple-500" />
+              <p>No ongoing projects right now.</p>
             </div>
           )}
         </div>

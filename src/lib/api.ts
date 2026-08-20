@@ -14,9 +14,7 @@ export const updateWork = async (workId: string, data: Partial<Work>) => {
 };
 
 export const listenToWorks = (studioId: string, callback: (works: Work[]) => void) => {
-  // Query ignoring studioId for now to make it easy across mock data without strict rules.
-  // In production, you'd add: where('studioId', '==', studioId)
-  const q = query(collection(db, 'works'), orderBy('createdAt', 'desc'));
+  const q = query(collection(db, 'works'), where('studioId', '==', studioId));
   return onSnapshot(q, (snap) => {
     const works = snap.docs.map(d => ({
       ...d.data(),
@@ -24,6 +22,7 @@ export const listenToWorks = (studioId: string, callback: (works: Work[]) => voi
       createdAt: d.data().createdAt?.toDate ? d.data().createdAt.toDate() : new Date(),
       dueDate: d.data().dueDate?.toDate ? d.data().dueDate.toDate() : new Date(d.data().dueDate || Date.now()),
     })) as Work[];
+    works.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     callback(works);
   });
 };
@@ -33,7 +32,7 @@ export const deleteWork = async (workId: string) => {
 };
 
 export const getLatestWorkRefNumber = async (studioId: string): Promise<string> => {
-  const q = query(collection(db, 'works'));
+  const q = query(collection(db, 'works'), where('studioId', '==', studioId));
   const snap = await getDocs(q);
   if (snap.empty) return 'YSR00000';
   
@@ -59,7 +58,7 @@ export const createCustomer = async (customer: Customer) => {
 };
 
 export const listenToCustomers = (studioId: string, callback: (customers: Customer[]) => void) => {
-  const q = query(collection(db, 'customers'));
+  const q = query(collection(db, 'customers'), where('studioId', '==', studioId));
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map(d => d.data() as Customer));
   });
@@ -92,9 +91,11 @@ export const deleteBooking = async (bookingId: string) => {
 };
 
 export const listenToBookings = (studioId: string, callback: (bookings: Booking[]) => void) => {
-  const q = query(collection(db, 'bookings'), orderBy('date', 'desc'));
+  const q = query(collection(db, 'bookings'), where('studioId', '==', studioId));
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => d.data() as Booking));
+    const data = snap.docs.map(d => d.data() as Booking);
+    data.sort((a, b) => b.date - a.date);
+    callback(data);
   });
 };
 
@@ -126,7 +127,7 @@ export const deleteIncome = async (id: string) => {
 };
 
 export const listenToExpenses = (studioId: string, callback: (expenses: Expense[]) => void) => {
-  const q = query(collection(db, 'expenses'));
+  const q = query(collection(db, 'expenses'), where('studioId', '==', studioId));
   return onSnapshot(q, (snap) => {
     const data = snap.docs.map(d => d.data() as Expense);
     data.sort((a, b) => b.date - a.date);
@@ -135,7 +136,7 @@ export const listenToExpenses = (studioId: string, callback: (expenses: Expense[
 };
 
 export const listenToIncomes = (studioId: string, callback: (incomes: any[]) => void) => {
-  const q = query(collection(db, 'incomes'));
+  const q = query(collection(db, 'incomes'), where('studioId', '==', studioId));
   return onSnapshot(q, (snap) => {
     const data = snap.docs.map(d => d.data());
     data.sort((a, b) => b.date - a.date);
@@ -151,7 +152,7 @@ export const createAttendance = async (attendance: any) => {
 };
 
 export const listenToAttendance = (studioId: string, callback: (attendance: any[]) => void) => {
-  const q = query(collection(db, 'attendance'));
+  const q = query(collection(db, 'attendance'), where('studioId', '==', studioId));
   return onSnapshot(q, (snap) => {
     const data = snap.docs.map(d => d.data());
     data.sort((a, b) => b.date - a.date);
@@ -175,7 +176,7 @@ export const paySalary = async (payment: any) => {
 };
 
 export const listenToSalaryPayments = (studioId: string, callback: (payments: any[]) => void) => {
-  const q = query(collection(db, 'salaryPayments'));
+  const q = query(collection(db, 'salaryPayments'), where('studioId', '==', studioId));
   return onSnapshot(q, (snap) => {
     const data = snap.docs.map(d => d.data());
     data.sort((a, b) => b.datePaid - a.datePaid);
