@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { format, isSameDay } from 'date-fns';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { listenToBookings, createBooking, updateBookingStatus, createWork, getCustomerByPhone } from '@/lib/api';
+import { createBooking, updateBookingStatus, createWork, getCustomerByPhone } from '@/lib/api';
 import { useAppStore } from '@/store/useAppStore';
 
 export default function Bookings() {
@@ -19,8 +19,7 @@ export default function Bookings() {
   const [bookingToMove, setBookingToMove] = useState<any>(null);
   const [isMoving, setIsMoving] = useState(false);
   
-  const { activeStudioId } = useAppStore();
-  const [bookings, setBookings] = useState<any[]>([]);
+  const { activeStudioId, bookings } = useAppStore();
   const [existingCustomer, setExistingCustomer] = useState<any>(null);
 
   // Auto-detect customer by phone
@@ -43,24 +42,18 @@ export default function Bookings() {
     return () => clearTimeout(timeoutId);
   }, [newBookingData.phone]);
 
-  useEffect(() => {
-    if (!activeStudioId) return;
-    const unsub = listenToBookings(activeStudioId, (fetchedBookings) => {
-      setBookings(fetchedBookings.map(b => ({
+  const parsedBookings = useMemo(() => {
+    return bookings.map(b => ({
         ...b,
         time: new Date(b.date)
-      })));
-    });
-    return () => unsub();
-  }, [activeStudioId]);
+    })).filter(b => b.status === 'scheduled')
+      .sort((a, b) => a.time.getTime() - b.time.getTime());
+  }, [bookings]);
 
   const today = new Date();
 
   // Active bookings are those scheduled for today or in the future
-  const activeBookings = useMemo(() => {
-    return bookings.filter(b => b.status === 'scheduled')
-      .sort((a, b) => a.time.getTime() - b.time.getTime());
-  }, [bookings]);
+  const activeBookings = parsedBookings;
 
   const handleCreateBooking = async (e: React.FormEvent) => {
     e.preventDefault();

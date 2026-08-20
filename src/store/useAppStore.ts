@@ -15,6 +15,8 @@ interface AppState {
   setExpenses: (expenses: Expense[]) => void;
   incomes: any[];
   setIncomes: (incomes: any[]) => void;
+  bookings: any[];
+  setBookings: (bookings: any[]) => void;
   
   studios: Studio[];
   setStudios: (studios: Studio[]) => void;
@@ -49,6 +51,8 @@ export const useAppStore = create<AppState>()(
       setExpenses: (expenses) => set({ expenses }),
       incomes: [],
       setIncomes: (incomes) => set({ incomes }),
+      bookings: [],
+      setBookings: (bookings) => set({ bookings }),
       
       studios: [],
       setStudios: (studios) => set((state) => {

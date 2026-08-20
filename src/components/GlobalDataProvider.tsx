@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { listenToWorks, listenToCustomers, listenToBookings, listenToExpenses, listenToIncomes } from '@/lib/api';
 
 export default function GlobalDataProvider({ children }: { children: React.ReactNode }) {
-  const { activeStudioId, setWorks, setCustomers, setExpenses, setIncomes } = useAppStore();
+  const { activeStudioId, setWorks, setCustomers, setExpenses, setIncomes, setBookings } = useAppStore();
 
   useEffect(() => {
     if (!activeStudioId) return;
@@ -12,17 +12,16 @@ export default function GlobalDataProvider({ children }: { children: React.React
     const unsubCustomers = listenToCustomers(activeStudioId, setCustomers);
     const unsubExpenses = listenToExpenses(activeStudioId, setExpenses);
     const unsubIncomes = listenToIncomes(activeStudioId, setIncomes);
-
-    // Currently Bookings aren't globally needed everywhere but let's keep it here if we want or just let Bookings page load it.
-    // For now, works and customers are the biggest ones causing lag.
+    const unsubBookings = listenToBookings(activeStudioId, setBookings);
 
     return () => {
       unsubWorks();
       unsubCustomers();
       unsubExpenses();
       unsubIncomes();
+      unsubBookings();
     };
-  }, [activeStudioId, setWorks, setCustomers, setExpenses, setIncomes]);
+  }, [activeStudioId, setWorks, setCustomers, setExpenses, setIncomes, setBookings]);
 
   return <>{children}</>;
 }

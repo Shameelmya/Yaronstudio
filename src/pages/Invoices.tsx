@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Search, Download, FileText, User } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
-import { listenToWorks, listenToCustomers } from '@/lib/api';
 import { generateInvoice, generateCustomerMasterInvoice } from '@/lib/invoice';
 import { formatCurrency, cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -13,22 +12,11 @@ export default function Invoices() {
   const [activeTab, setActiveTab] = useState<'work' | 'customer'>('work');
   const [searchQuery, setSearchQuery] = useState('');
   
-  const { activeStudioId } = useAppStore();
-  const [works, setWorks] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
+  const { activeStudioId, works, customers } = useAppStore();
   
   // For Customer tab checkbox selection
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedWorkIds, setSelectedWorkIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!activeStudioId) return;
-    
-    const unsubWorks = listenToWorks(activeStudioId, setWorks);
-    const unsubCustomers = listenToCustomers(activeStudioId, setCustomers);
-
-    return () => { unsubWorks(); unsubCustomers(); };
-  }, [activeStudioId]);
 
   // Work-based filtered works
   const filteredWorks = useMemo(() => {
