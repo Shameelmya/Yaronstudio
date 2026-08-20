@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { IndianRupee, TrendingUp, TrendingDown, Plus, Filter, Music, Video, Headphones, Mic } from 'lucide-react';
+import { IndianRupee, TrendingUp, TrendingDown, Plus, Filter, Music, Video, Headphones, Mic, Download } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
 import { startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { NewExpenseModal } from '@/components/finance/NewExpenseModal';
 import { NewIncomeModal } from '@/components/finance/NewIncomeModal';
 import { AllTransactionsTable } from '@/components/finance/AllTransactionsTable';
+import { generateFinanceReport } from '@/lib/invoice';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 
@@ -125,6 +126,50 @@ export default function Finance() {
     }
   };
 
+  const handleExport = () => {
+    const transactions: any[] = [];
+    
+    works.forEach(w => {
+      if (w.paidAmount && w.paidAmount > 0) {
+        transactions.push({
+          id: `work_${w.id}`,
+          date: new Date(w.createdAt || Date.now()).getTime(),
+          type: 'work',
+          person: w.customerId,
+          description: `Payment for ${w.title}`,
+          amount: w.paidAmount
+        });
+      }
+    });
+
+    incomes.forEach(i => {
+      transactions.push({
+        id: `inc_${i.id}`,
+        date: i.date,
+        type: 'income',
+        person: i.title,
+        description: i.description || 'Income',
+        amount: i.amount
+      });
+    });
+
+    expenses.forEach(e => {
+      transactions.push({
+        id: `exp_${e.id}`,
+        date: e.date,
+        type: 'expense',
+        person: e.title,
+        description: e.description || 'Expense',
+        amount: e.amount
+      });
+    });
+
+    const filtered = transactions.filter(t => isWithinInterval(new Date(t.date), { start: startDate, end: endDate }))
+      .sort((a, b) => b.date - a.date);
+
+    generateFinanceReport(filtered, startDate, endDate);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -133,7 +178,10 @@ export default function Finance() {
           <p className="text-gray-500 dark:text-gray-400 text-sm">Manage income, expenses, and invoices</p>
         </div>
         <div className="flex space-x-3 w-full sm:w-auto relative">
-          <Button onClick={() => setIsFilterOpen(!isFilterOpen)} variant="outline" className="h-12 w-12 p-0 flex items-center justify-center shrink-0 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl relative">
+          <Button onClick={handleExport} variant="outline" className="h-12 w-12 p-0 flex items-center justify-center shrink-0 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl" title="Export to PDF">
+            <Download size={20} className="text-gray-500 dark:text-gray-400" />
+          </Button>
+          <Button onClick={() => setIsFilterOpen(!isFilterOpen)} variant="outline" className="h-12 w-12 p-0 flex items-center justify-center shrink-0 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl relative" title="Filter Dates">
             <Filter size={20} className={timeFilter !== 'This Month' && timeFilter !== 'All Time' ? "text-yaron-magenta" : "text-gray-500 dark:text-gray-400"} />
           </Button>
           

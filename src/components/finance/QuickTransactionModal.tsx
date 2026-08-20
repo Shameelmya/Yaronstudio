@@ -29,14 +29,14 @@ export function QuickTransactionModal({ isOpen, onClose }: QuickTransactionModal
           onClick={() => setType('income')}
         >
           <ArrowUpRight size={28} />
-          <span className="font-bold">Add Income</span>
+          <span className="font-bold">Income</span>
         </Button>
         <Button 
           className="h-24 flex flex-col items-center justify-center space-y-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-400 dark:border-red-900/30"
           onClick={() => setType('expense')}
         >
           <ArrowDownRight size={28} />
-          <span className="font-bold">Add Expense</span>
+          <span className="font-bold">Expense</span>
         </Button>
       </div>
     </Modal>

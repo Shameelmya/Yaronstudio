@@ -165,6 +165,82 @@ export const generateInvoice = async (work: any, customer: any) => {
   doc.save(`Invoice_${safeTitle}.pdf`);
 };
 
+export const generateFinanceReport = (transactions: any[], startDate: Date, endDate: Date) => {
+  const doc = new jsPDF();
+  const primaryColor: [number, number, number] = [213, 55, 104];
+  
+  doc.setFontSize(20);
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setFont('helvetica', 'bold');
+  doc.text('YARON STUDIO - FINANCIAL REPORT', 14, 22);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(51, 51, 51);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Period: ${format(startDate, 'MMM dd, yyyy')} to ${format(endDate, 'MMM dd, yyyy')}`, 14, 30);
+  doc.text(`Generated on: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, 14, 35);
+  
+  let totalIncome = 0;
+  let totalExpense = 0;
+
+  const tableData = transactions.map(tx => {
+    let income = 0;
+    let expense = 0;
+    if (tx.type === 'work' || tx.type === 'income') {
+      income = tx.amount;
+      totalIncome += income;
+    } else {
+      expense = tx.amount;
+      totalExpense += expense;
+    }
+    
+    return [
+      format(new Date(tx.date), 'dd/MM/yyyy'),
+      tx.type.charAt(0).toUpperCase() + tx.type.slice(1),
+      tx.person,
+      tx.description,
+      income > 0 ? `Rs ${income}` : '-',
+      expense > 0 ? `Rs ${expense}` : '-'
+    ];
+  });
+  
+  autoTable(doc, {
+    startY: 45,
+    head: [['Date', 'Type', 'Person/Client', 'Description', 'Income', 'Expense']],
+    body: tableData,
+    theme: 'grid',
+    headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 4 },
+    columnStyles: {
+      4: { halign: 'right', textColor: [0, 128, 0] },
+      5: { halign: 'right', textColor: [200, 0, 0] }
+    }
+  });
+
+  const finalY = (doc as any).lastAutoTable.finalY + 15;
+  
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(51, 51, 51);
+  doc.text('Summary', 14, finalY);
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Total Income:`, 14, finalY + 8);
+  doc.text(`Rs ${totalIncome}`, 60, finalY + 8, { align: 'right' });
+  
+  doc.text(`Total Expenses:`, 14, finalY + 15);
+  doc.text(`Rs ${totalExpense}`, 60, finalY + 15, { align: 'right' });
+  
+  doc.setFont('helvetica', 'bold');
+  const netProfit = totalIncome - totalExpense;
+  doc.text(`Net Profit:`, 14, finalY + 25);
+  doc.setTextColor(netProfit >= 0 ? 0 : 200, netProfit >= 0 ? 128 : 0, 0);
+  doc.text(`Rs ${netProfit}`, 60, finalY + 25, { align: 'right' });
+  
+  doc.save(`Financial_Report_${format(startDate, 'dd_MMM')}-${format(endDate, 'dd_MMM_yyyy')}.pdf`);
+};
+
 export const generateCustomerMasterInvoice = async (customer: any, works: any[]) => {
   const doc = new jsPDF();
   const primaryColor: [number, number, number] = [213, 55, 104]; // Yaron Magenta
